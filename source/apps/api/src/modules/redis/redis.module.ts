@@ -12,10 +12,12 @@ import { RedisService } from './redis.service';
       useFactory: async (configService: ConfigService<EnvConfig, true>) => {
         const { Redis } = await import('ioredis');
 
+        const password = configService.get('REDIS_PASSWORD', { infer: true });
+        
         const client = new Redis({
           host: configService.get('REDIS_HOST', { infer: true }),
           port: configService.get('REDIS_PORT', { infer: true }),
-          password: configService.get('REDIS_PASSWORD', { infer: true }),
+          password: password || undefined, // Chỉ set khi có password
           db: configService.get('REDIS_DB', { infer: true }),
           retryStrategy: (times) => {
             const delay = Math.min(times * 50, 2000);

@@ -93,7 +93,7 @@ export class AuthService {
   }
 
   // Todo: Bàn lại với FE xem có muốn register xong là tự login vô luôn ko? hay phải out ra màn hình login rồi cho login
-  async registryConfirm(dto: RegisterConfirmDto): Promise<AuthResponseDto> {
+  async registerConfirm(dto: RegisterConfirmDto): Promise<AuthResponseDto> {
     const { registrationToken, otp } = dto;
 
     // 1. Retrieve registration data from Redis
@@ -251,6 +251,17 @@ export class AuthService {
     });
 
     return { accessToken };
+  }
+
+  async logout(userId: string, refreshToken: string): Promise<void> {
+    const tokenHash = await bcrypt.hash(refreshToken, this.SALT_ROUNDS);
+
+    // Find and delete session
+    await this.prisma.userSession.deleteMany({
+      where: {userId}
+    });
+
+    this.logger.log(`User logged out: ${userId}`);
   }
 
   // =============== HELPER FUNCTION ================

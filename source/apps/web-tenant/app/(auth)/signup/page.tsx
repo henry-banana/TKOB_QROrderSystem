@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import Login from '@/features/auth/Login';
+import Signup from '@/features/auth/Signup';
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
 
   return (
@@ -16,8 +16,8 @@ export default function LoginPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow-xl p-8 space-y-6">
-          {/* Render feature Login and delegate navigation to router */}
-          <Login onNavigate={(path) => router.push(path)} />
+          {/* Render feature Signup and delegate navigation to router */}
+          <Signup onNavigate={(path) => router.push(path)} />
         </div>
       </div>
     </main>

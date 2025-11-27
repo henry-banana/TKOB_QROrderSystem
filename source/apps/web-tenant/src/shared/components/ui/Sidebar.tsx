@@ -1,0 +1,58 @@
+import React from 'react';
+import { LayoutDashboard, Menu, QrCode, ShoppingBag, BarChart3, Users, Settings } from 'lucide-react';
+
+interface SidebarProps {
+  activeItem: string;
+  onNavigate: (item: string) => void;
+}
+
+export function Sidebar({ activeItem, onNavigate }: SidebarProps) {
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'menu', label: 'Menu', icon: Menu },
+    { id: 'tables', label: 'Tables & QR', icon: QrCode },
+    { id: 'orders', label: 'Orders', icon: ShoppingBag },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+    { id: 'staff', label: 'Staff', icon: Users },
+    { id: 'settings', label: 'Settings', icon: Settings },
+  ];
+
+  return (
+    <div className="w-64 h-screen bg-white border-r border-gray-200 flex flex-col">
+      {/* Logo */}
+      <div className="p-6 border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center">
+            <QrCode className="w-6 h-6 text-white" />
+          </div>
+          <span className="font-semibold text-gray-900" style={{ fontSize: '20px' }}>QR Dine</span>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 p-4 overflow-y-auto">
+        <div className="flex flex-col gap-1">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeItem === item.id;
+            
+            return (
+              <button
+                key={item.id}
+                onClick={() => onNavigate(item.id)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
+                  isActive 
+                    ? 'bg-emerald-50 text-emerald-600' 
+                    : 'text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+                <span style={{ fontSize: '15px', fontWeight: 500 }}>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+    </div>
+  );
+}

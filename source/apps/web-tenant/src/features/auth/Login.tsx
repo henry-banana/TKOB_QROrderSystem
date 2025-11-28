@@ -15,7 +15,7 @@ export function Login({ onNavigate }: LoginProps) {
   const [language, setLanguage] = useState('EN');
 
   const handleLogin = () => {
-    onNavigate?.('dashboard');
+    onNavigate?.('/admin/dashboard');
   };
 
   return (
@@ -75,7 +75,7 @@ export function Login({ onNavigate }: LoginProps) {
               </label>
               
               <button 
-                onClick={() => onNavigate?.('forgot-password')}
+                onClick={() => onNavigate?.('/forgot-password')}
                 className="text-emerald-500 hover:text-emerald-600 transition-colors" 
                 style={{ fontSize: '14px', fontWeight: 500 }}
               >
@@ -93,7 +93,7 @@ export function Login({ onNavigate }: LoginProps) {
                 Don&apos;t have an account?{' '}
               </span>
               <button 
-                onClick={() => onNavigate?.('signup')}
+                onClick={() => onNavigate?.('/signup')}
                 className="text-emerald-500 hover:text-emerald-600 transition-colors" 
                 style={{ fontSize: '14px', fontWeight: 500 }}
               >
@@ -113,7 +113,7 @@ export function Login({ onNavigate }: LoginProps) {
             
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => onNavigate?.('dashboard')}
+                onClick={() => onNavigate?.('/admin/dashboard')}
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 hover:border-emerald-500 transition-all"
                 style={{ fontSize: '13px', fontWeight: 500 }}
               >
@@ -121,7 +121,7 @@ export function Login({ onNavigate }: LoginProps) {
               </button>
               
               <button
-                onClick={() => onNavigate?.('kds')}
+                onClick={() => onNavigate?.('/admin/kds')}
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 hover:border-amber-500 transition-all"
                 style={{ fontSize: '13px', fontWeight: 500 }}
               >
@@ -129,7 +129,7 @@ export function Login({ onNavigate }: LoginProps) {
               </button>
               
               <button
-                onClick={() => onNavigate?.('service-board')}
+                onClick={() => onNavigate?.('/admin/service-board')}
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 hover:border-orange-500 transition-all"
                 style={{ fontSize: '13px', fontWeight: 500 }}
               >
@@ -137,7 +137,7 @@ export function Login({ onNavigate }: LoginProps) {
               </button>
               
               <button
-                onClick={() => onNavigate?.('staff-invitation')}
+                onClick={() => onNavigate?.('/staff-invitation')}
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-500 transition-all"
                 style={{ fontSize: '13px', fontWeight: 500 }}
               >

@@ -2,11 +2,14 @@ import React from 'react';
 import { Bell } from 'lucide-react';
 import { UserMenu } from './UserMenu';
 
+import type { AdminScreenId } from './AdminShell';
+
 interface TopBarProps {
   restaurantName: string;
   userName?: string;
   showDateFilter?: boolean;
-  onNavigate?: (screen: string) => void;
+  onNavigate?: (screen: AdminScreenId) => void;
+  enableDevModeSwitch?: boolean;
 }
 
 export function TopBar({ restaurantName, userName = 'Admin User', showDateFilter = false, onNavigate }: TopBarProps) {

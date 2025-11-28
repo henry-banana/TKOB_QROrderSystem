@@ -132,7 +132,7 @@ source/
 │   │   ├── src/
 │   │   │   ├── features/     # Business features
 │   │   │   ├── shared/       # Shared UI/hooks/utils
-│   │   │   ├── lib/          # API client, providers
+│   │   │   ├── lib/          # Core utilities; routes.ts for path constants
 │   │   │   ├── store/        # Global state
 │   │   │   ├── styles/       # Global styles
 │   │   │   └── assets/       # Images, fonts

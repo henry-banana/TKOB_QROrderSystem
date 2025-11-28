@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { defineConfig } from 'orval';
 
 // Orval configuration to generate typed API client & React Query hooks

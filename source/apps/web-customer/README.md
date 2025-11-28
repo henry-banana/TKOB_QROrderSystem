@@ -69,7 +69,7 @@ web-customer/
 │   ├── app/                # Next.js App Router (pages, layouts, routes)
 │   ├── features/           # Feature modules (UI + logic per feature)
 │   ├── shared/             # Reusable components, hooks, context, utils, types
-│   ├── lib/                # API clients, providers, core utilities
+│   ├── lib/                # Core utilities; routes.ts for path constants
 │   ├── store/              # Global state (Zustand)
 │   ├── styles/             # Global styles & Tailwind setup
 │   └── assets/             # Images, fonts, static assets
@@ -96,6 +96,20 @@ Key variables:
 - Path aliases: `@/*` → `./src/*`, `@/app/*` → `./src/app/*`.
 - App Router only; legacy `src/pages/` is removed to avoid route conflicts.
 - Keep page wrappers thin; implement UI logic within `src/features`.
+
+## Routing Helpers
+
+- Path constants: `src/lib/routes.ts` (e.g., `ROUTES.menu`)
+- App Router helpers: `src/shared/hooks/useAppRouter.ts`
+
+Usage example:
+```ts
+import { ROUTES } from '@/lib/routes';
+import { useAppRouter } from '@/shared/hooks/useAppRouter';
+
+const { goMenu } = useAppRouter();
+goMenu(); // navigates to ROUTES.menu
+```
 
 ## Tailwind CSS
 

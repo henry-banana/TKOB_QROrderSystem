@@ -1,11 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, User, LogOut } from 'lucide-react';
 
+import type { AdminScreenId } from './AdminShell';
+
 interface UserMenuProps {
   userName?: string;
   userRole?: string;
   avatarColor?: string;
-  onNavigate?: (screen: string) => void;
+  onNavigate?: (screen: AdminScreenId) => void;
 }
 
 export function UserMenu({ 

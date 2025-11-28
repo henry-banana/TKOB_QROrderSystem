@@ -1,9 +1,11 @@
 import React from 'react';
 import { LayoutDashboard, Menu, QrCode, ShoppingBag, BarChart3, Users, Settings } from 'lucide-react';
 
+import type { AdminNavItem, AdminScreenId } from './AdminShell';
+
 interface SidebarProps {
-  activeItem: string;
-  onNavigate: (item: string) => void;
+  activeItem: AdminNavItem;
+  onNavigate: (item: AdminScreenId) => void;
 }
 
 export function Sidebar({ activeItem, onNavigate }: SidebarProps) {
@@ -14,7 +16,7 @@ export function Sidebar({ activeItem, onNavigate }: SidebarProps) {
     { id: 'orders', label: 'Orders', icon: ShoppingBag },
     { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'staff', label: 'Staff', icon: Users },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'tenant-profile', label: 'Settings', icon: Settings },
   ];
 
   return (
@@ -39,7 +41,7 @@ export function Sidebar({ activeItem, onNavigate }: SidebarProps) {
             return (
               <button
                 key={item.id}
-                onClick={() => onNavigate(item.id)}
+                onClick={() => onNavigate(item.id as AdminScreenId)}
                 className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                   isActive 
                     ? 'bg-emerald-50 text-emerald-600' 

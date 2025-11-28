@@ -1,6 +1,6 @@
 import React from 'react';
-import { Sidebar } from '@/components/Sidebar';
-import { TopBar } from '@/components/TopBar';
+import { Sidebar } from '@/shared/components/ui/Sidebar';
+import { TopBar } from '@/shared/components/ui/TopBar';
 
 export type AdminScreenId =
   | 'dashboard'

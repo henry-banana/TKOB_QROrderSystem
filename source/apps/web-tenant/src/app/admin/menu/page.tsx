@@ -7,9 +7,9 @@ export const metadata: Metadata = {
   description: 'Manage your restaurant menu items, categories, and modifiers',
 };
 
-export default function Page() {
+export default function MenuPage() {
   return (
-    <RoleGuard allowedRoles={['tenant-admin', 'manager']}>
+    <RoleGuard allowedRoles={['admin']}>
       <MenuManagementPage />
     </RoleGuard>
   );

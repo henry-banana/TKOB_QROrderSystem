@@ -9,7 +9,7 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <RoleGuard allowedRoles={['tenant-admin', 'manager']}>
+    <RoleGuard allowedRoles={['admin', 'waiter']}>
       <OrderManagementPage />
     </RoleGuard>
   );

@@ -3,6 +3,7 @@ import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 import { Card } from '@/shared/components/ui/Card';
 import { QrCode } from 'lucide-react';
+import { useAuth } from '@/shared/context/AuthContext';
 import "../../styles/globals.css";
 interface LoginProps {
   onNavigate?: (screen: string) => void;
@@ -13,9 +14,22 @@ export function Login({ onNavigate }: LoginProps) {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [language, setLanguage] = useState('EN');
+  const { devLogin } = useAuth();
 
   const handleLogin = () => {
     onNavigate?.('/admin/dashboard');
+  };
+
+  const handleDevLogin = (role: 'admin' | 'kds' | 'waiter') => {
+    devLogin(role);
+    // Navigate based on role
+    if (role === 'admin') {
+      onNavigate?.('/admin/dashboard');
+    } else if (role === 'kds') {
+      onNavigate?.('/admin/kds');
+    } else if (role === 'waiter') {
+      onNavigate?.('/admin/service-board');
+    }
   };
 
   return (
@@ -113,27 +127,27 @@ export function Login({ onNavigate }: LoginProps) {
             
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => onNavigate?.('/admin/dashboard')}
+                onClick={() => handleDevLogin('admin')}
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 hover:border-emerald-500 transition-all"
                 style={{ fontSize: '13px', fontWeight: 500 }}
               >
-                Login as Admin
+                🔐 Login as Admin
               </button>
               
               <button
-                onClick={() => onNavigate?.('/admin/kds')}
+                onClick={() => handleDevLogin('kds')}
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 hover:border-amber-500 transition-all"
                 style={{ fontSize: '13px', fontWeight: 500 }}
               >
-                Login as KDS
+                👨‍🍳 Login as KDS
               </button>
               
               <button
-                onClick={() => onNavigate?.('/admin/service-board')}
-                className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 hover:border-orange-500 transition-all"
+                onClick={() => handleDevLogin('waiter')}
+                className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 hover:border-blue-500 transition-all"
                 style={{ fontSize: '13px', fontWeight: 500 }}
               >
-                Login as Waiter
+                🧑‍💼 Login as Waiter
               </button>
               
               <button
@@ -141,7 +155,7 @@ export function Login({ onNavigate }: LoginProps) {
                 className="px-3 py-2 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-500 transition-all"
                 style={{ fontSize: '13px', fontWeight: 500 }}
               >
-                Staff Invitation
+                ✉️ Staff Invitation
               </button>
             </div>
           </div>

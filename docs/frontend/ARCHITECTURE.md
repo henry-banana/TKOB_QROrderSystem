@@ -2115,6 +2115,20 @@ module.exports = {
 
 ---
 
+## Related Guides
+
+Các guide hỗ trợ thực thi và onboarding nằm trong `docs/frontend/guide/`:
+
+| File | Nội dung |
+|------|----------|
+| `guide/ONBOARDING_CHECKLIST.md` | Checklist nhanh & nhiệm vụ đầu tiên |
+| `guide/NEXTJS_15_APP_ROUTER_GUIDE.md` | App Router, Server/Client Components, middleware |
+| `guide/PATTERNS_AND_CONVENTIONS.md` | Quy ước cấu trúc feature, hooks, services, import rules |
+| `guide/FEATURE_IMPLEMENTATION_GUIDE.md` | Ví dụ triển khai Analytics Dashboard đầy đủ |
+| `guide/README.md` | Mục lục & định hướng đọc |
+
+Thứ tự đọc khuyến nghị: Checklist → App Router → Patterns → Feature Example → (tài liệu kiến trúc này).
+
 ## Changelog
 
 | Date | Version | Changes |

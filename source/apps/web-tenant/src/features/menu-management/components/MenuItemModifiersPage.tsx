@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from '@/shared/components/ui/Card';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 import { ArrowLeft, Plus, GripVertical, Trash2 } from 'lucide-react';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
+import { useSearchParams } from 'next/navigation';
+import { ensureModifiers, setModifiers, ModifiersData } from '@/features/menu-management/state/modifiersStore';
 import { ROUTES } from '@/lib/routes';
 
 interface SizeOption {
@@ -23,20 +25,19 @@ interface Topping {
 
 export function MenuItemModifiersPage() {
   const { goTo } = useAppRouter();
+  const search = useSearchParams();
+  const itemId = search.get('itemId') || 'unknown';
   const [activeTab, setActiveTab] = useState<'details' | 'modifiers' | 'availability'>('details');
-  const [sizeOptions, setSizeOptions] = useState<SizeOption[]>([
-    { id: '1', name: 'Small', price: '+$0.00' },
-    { id: '2', name: 'Medium', price: '+$3.00' },
-    { id: '3', name: 'Large', price: '+$5.00' },
-  ]);
-  const [toppings, setToppings] = useState<Topping[]>([
-    { id: '1', name: 'Extra Chicken', price: '+$4.00', available: true },
-    { id: '2', name: 'Extra Parmesan', price: '+$2.00', available: true },
-    { id: '3', name: 'Croutons', price: '+$1.50', available: true },
-    { id: '4', name: 'Bacon Bits', price: '+$3.00', available: true },
-    { id: '5', name: 'Avocado', price: '+$3.50', available: true },
-  ]);
-  const [allowSpecialInstructions, setAllowSpecialInstructions] = useState(true);
+  const [sizeOptions, setSizeOptions] = useState<SizeOption[]>([]);
+  const [toppings, setToppings] = useState<Topping[]>([]);
+  const [allowSpecialInstructions, setAllowSpecialInstructions] = useState<boolean>(true);
+
+  useEffect(() => {
+    const data: ModifiersData = ensureModifiers(itemId);
+    setSizeOptions(data.sizeOptions);
+    setToppings(data.toppings);
+    setAllowSpecialInstructions(data.allowSpecialInstructions);
+  }, [itemId]);
 
   const handleAddSize = () => {
     const newSize: SizeOption = {
@@ -84,8 +85,11 @@ export function MenuItemModifiersPage() {
   };
 
   const handleSave = () => {
-    // TODO: Implement save logic
-    console.log('Saving modifiers...', { sizeOptions, toppings, allowSpecialInstructions });
+    setModifiers(itemId, {
+      sizeOptions,
+      toppings,
+      allowSpecialInstructions,
+    });
     goTo(ROUTES.menu);
   };
 

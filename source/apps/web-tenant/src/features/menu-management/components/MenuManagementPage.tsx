@@ -9,6 +9,7 @@ import { Plus, Edit, Trash2, Upload, X, Image as ImageIcon } from 'lucide-react'
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { ROUTES } from '@/lib/routes';
 import { Toast } from '@/shared/components/ui/Toast'
+import { getModifiers, ModifiersData } from '@/features/menu-management/state/modifiersStore'
 // Full featured Menu Management (ported from Admin-screens) without layout shell
 export function MenuManagementPage() {
   const { goTo } = useAppRouter();
@@ -27,6 +28,7 @@ export function MenuManagementPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [modifiersSummary, setModifiersSummary] = useState<ModifiersData | null>(null);
 
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [itemModalMode, setItemModalMode] = useState<'add' | 'edit'>('add');
@@ -117,6 +119,16 @@ export function MenuManagementPage() {
     setItemFormData({ name: '', category: 'starters', description: '', price: '', available: true, image: null });
   };
 
+  // Sync modifiers summary when selected item changes
+  React.useEffect(() => {
+    if (!editingItem) {
+      setModifiersSummary(null);
+      return;
+    }
+    const data = getModifiers(editingItem);
+    setModifiersSummary(data ?? null);
+  }, [editingItem]);
+
   const handleSaveItem = () => {
     if (itemFormData.name.trim() && itemFormData.price.trim()) {
       if (itemModalMode === 'add') {
@@ -191,7 +203,16 @@ export function MenuManagementPage() {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-gray-900">Menu Management</h2>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => goTo(ROUTES.menuModifiers)}>Modifiers</Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              const id = editingItem || menuItems.find(i => i.category === selectedCategory)?.id || 'unknown';
+              const url = `${ROUTES.menuModifiers}?itemId=${encodeURIComponent(id)}`;
+              goTo(url);
+            }}
+          >
+            Modifiers
+          </Button>
         </div>
       </div>
 
@@ -322,7 +343,13 @@ export function MenuManagementPage() {
                 <div className="flex flex-col gap-6">
                   <div className="flex items-center justify-between">
                     <h3 className="text-gray-900">Item Details</h3>
-                    <button className="text-emerald-500 text-sm font-medium hover:text-emerald-600" onClick={() => goTo(ROUTES.menuModifiers)}>
+                    <button
+                      className="text-emerald-500 text-sm font-medium hover:text-emerald-600"
+                      onClick={() => {
+                        const url = `${ROUTES.menuModifiers}?itemId=${encodeURIComponent(selectedItem.id)}`;
+                        goTo(url);
+                      }}
+                    >
                       Manage Modifiers →
                     </button>
                   </div>
@@ -347,6 +374,18 @@ export function MenuManagementPage() {
                       <p className="text-[11px] text-gray-600 mb-1">Status</p>
                       <p className="text-sm font-semibold text-gray-900">{selectedItem.status === 'available' ? 'In Stock' : 'Out of Stock'}</p>
                     </div>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-xl">
+                    <p className="text-[11px] text-gray-600 mb-1">Modifiers Summary</p>
+                    {modifiersSummary ? (
+                      <div className="text-sm text-gray-900">
+                        <span className="font-semibold">{modifiersSummary.sizeOptions.length}</span> sizes,{' '}
+                        <span className="font-semibold">{modifiersSummary.toppings.length}</span> toppings,{' '}
+                        <span className="font-semibold">{modifiersSummary.allowSpecialInstructions ? 'notes enabled' : 'notes disabled'}</span>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-500">No modifiers configured</p>
+                    )}
                   </div>
                   <div className="flex flex-col gap-3 pt-4 border-t border-gray-200">
                     <Button onClick={() => handleOpenEditItemModal({ stopPropagation: () => {} } as React.MouseEvent, selectedItem)}>Edit Item</Button>

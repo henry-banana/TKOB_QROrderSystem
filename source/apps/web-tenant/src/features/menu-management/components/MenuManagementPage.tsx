@@ -10,6 +10,7 @@ import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { ROUTES } from '@/lib/routes';
 import { Toast } from '@/shared/components/ui/Toast'
 import { getModifiers, ModifiersData } from '@/features/menu-management/state/modifiersStore'
+import { MenuTabs } from './MenuTabs'
 // Full featured Menu Management (ported from Admin-screens) without layout shell
 export function MenuManagementPage() {
   const { goTo } = useAppRouter();
@@ -201,19 +202,11 @@ export function MenuManagementPage() {
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-gray-900">Menu Management</h2>
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              const id = editingItem || menuItems.find(i => i.category === selectedCategory)?.id || 'unknown';
-              const url = `${ROUTES.menuModifiers}?itemId=${encodeURIComponent(id)}`;
-              goTo(url);
-            }}
-          >
-            Modifiers
-          </Button>
+        <div>
+          <h2 className="text-gray-900 mb-2">Menu Management</h2>
+          <p className="text-sm text-gray-600">Manage your menu items, categories, and pricing</p>
         </div>
+        <MenuTabs />
       </div>
 
       <div className="grid grid-cols-12 gap-6" style={{ minHeight: 'calc(100vh - 180px)' }}>
@@ -388,7 +381,7 @@ export function MenuManagementPage() {
                     <button
                       className="text-emerald-500 text-sm font-medium hover:text-emerald-600"
                       onClick={() => {
-                        const url = `${ROUTES.menuModifiers}?itemId=${encodeURIComponent(selectedItem.id)}`;
+                        const url = `${ROUTES.menuItemModifiers}?itemId=${encodeURIComponent(selectedItem.id)}`;
                         goTo(url);
                       }}
                     >

@@ -8,7 +8,8 @@ export const ROUTES = {
   // Admin routes - all prefixed with /admin
   dashboard: '/admin/dashboard',
   menu: '/admin/menu',
-  menuModifiers: '/admin/menu-modifiers',
+  menuModifiers: '/admin/menu/modifiers',
+  menuItemModifiers: '/admin/menu-item-modifiers',
   tables: '/admin/tables',
   tableQRDetail: '/admin/table-qr-detail',
   orders: '/admin/orders',

@@ -482,9 +482,9 @@ export function MenuManagementPage() {
                   <p className="text-xs text-gray-600">Toggle to make this item {itemFormData.available ? 'unavailable' : 'available'}</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" className="sr-only" checked={itemFormData.available} onChange={e => setItemFormData({ ...itemFormData, available: e.target.checked })} />
-                  <div className="w-11 h-6 bg-gray-200 peer-checked:bg-emerald-500 rounded-full relative">
-                    <div className="absolute top-0.5 left-0.5 bg-white border border-gray-300 rounded-full h-5 w-5 transition-transform peer-checked:translate-x-full" />
+                  <input type="checkbox" className="sr-only peer" checked={itemFormData.available} onChange={e => setItemFormData({ ...itemFormData, available: e.target.checked })} />
+                  <div className={`w-11 h-6 rounded-full relative transition-colors ${itemFormData.available ? 'bg-emerald-500' : 'bg-gray-200'}`}>
+                    <div className={`absolute top-0.5 left-0.5 bg-white border border-gray-300 rounded-full h-5 w-5 transition-transform ${itemFormData.available ? 'translate-x-5' : 'translate-x-0'}`} />
                   </div>
                 </label>
               </div>

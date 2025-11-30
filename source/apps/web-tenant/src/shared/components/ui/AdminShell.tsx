@@ -64,21 +64,28 @@ export const AdminShell: React.FC<AdminShellProps> = ({
   children,
 }) => {
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-slate-50">
       {/* Sidebar - Fixed on desktop, hidden on mobile */}
       <Sidebar activeItem={activeItem} onNavigate={onNavigate} />
 
-      {/* Main scrollable area offset by sidebar width */}
-      <main className="flex-1 md:ml-64 bg-slate-50 flex flex-col">
-        <TopBar
-          restaurantName={restaurantName}
-          onNavigate={onNavigate}
-          enableDevModeSwitch={enableDevModeSwitch}
-        />
-        <div className="px-8 py-6 flex-1">
-          {children}
-        </div>
-      </main>
+      {/* Main area with fixed topbar and scrollable content */}
+      <div className="flex-1 md:ml-64 flex flex-col">
+        {/* TopBar - Fixed header */}
+        <header className="shrink-0">
+          <TopBar
+            restaurantName={restaurantName}
+            onNavigate={onNavigate}
+            enableDevModeSwitch={enableDevModeSwitch}
+          />
+        </header>
+
+        {/* Content - Only this part scrolls */}
+        <main className="flex-1 overflow-y-auto bg-slate-50">
+          <div className="px-8 py-6">
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 };

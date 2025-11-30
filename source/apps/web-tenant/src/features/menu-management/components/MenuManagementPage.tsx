@@ -296,8 +296,9 @@ export function MenuManagementPage() {
                       className={`p-4 rounded-xl border transition-all cursor-pointer ${editingItem === item.id ? 'border-emerald-500 bg-emerald-50' : item.id === newlyAddedItemId ? 'border-emerald-400 bg-emerald-50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}
                       onClick={() => handleItemClick(item.id)}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
+                      <div className="flex">
+                        <div className="flex-1 flex flex-col">
+                          {/* title + status row */}
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-sm font-semibold text-gray-900">{item.name}</span>
                             {item.id === newlyAddedItemId && (
@@ -307,8 +308,49 @@ export function MenuManagementPage() {
                               {item.status === 'available' ? 'Available' : 'Unavailable'}
                             </Badge>
                           </div>
-                          <p className="text-gray-600 text-xs mb-2">{item.description}</p>
-                          <span className="text-emerald-600 text-sm font-semibold">{item.price}</span>
+                          {/* description + modifier pills */}
+                          <div className="mt-1 flex flex-col gap-1">
+                            <p className="text-sm text-gray-600">{item.description}</p>
+                            {(() => {
+                              const mods = getModifiers(item.id);
+                              const sizeCount = mods?.sizeOptions?.length ?? 0;
+                              const toppingCount = mods?.toppings?.length ?? 0;
+                              const notes = !!mods?.allowSpecialInstructions;
+                              if (!sizeCount && !toppingCount && !notes) return null;
+                              return (
+                                <div className="inline-flex flex-wrap gap-1">
+                                  {sizeCount > 0 && (
+                                    <span
+                                      className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[11px] font-medium"
+                                      title="Available size options configured for this item"
+                                    >
+                                      {sizeCount} sizes
+                                    </span>
+                                  )}
+                                  {toppingCount > 0 && (
+                                    <span
+                                      className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[11px] font-medium"
+                                      title="Topping groups configured for this item"
+                                    >
+                                      {toppingCount} toppings
+                                    </span>
+                                  )}
+                                  {notes && (
+                                    <span
+                                      className="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 text-[11px] font-medium"
+                                      title="Customers can add special instructions for this item"
+                                    >
+                                      Notes enabled
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                          {/* price row – always its own line */}
+                          <div className="mt-2 text-sm font-semibold text-emerald-600">
+                            {item.price}
+                          </div>
                         </div>
                         <div className="flex gap-2 ml-4">
                           <button

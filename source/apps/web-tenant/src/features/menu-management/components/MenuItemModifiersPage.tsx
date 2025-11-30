@@ -7,6 +7,7 @@ import { Input } from '@/shared/components/ui/Input';
 import { ArrowLeft, Plus, GripVertical, Trash2 } from 'lucide-react';
 import { useAppRouter } from '@/shared/hooks/useAppRouter';
 import { useSearchParams } from 'next/navigation';
+import { getMenuItemById, MenuItem } from '@/features/menu-management/state/menuStore';
 import { ensureModifiers, setModifiers, ModifiersData } from '@/features/menu-management/state/modifiersStore';
 import { ROUTES } from '@/lib/routes';
 
@@ -27,6 +28,7 @@ export function MenuItemModifiersPage() {
   const { goTo } = useAppRouter();
   const search = useSearchParams();
   const itemId = search.get('itemId') || 'unknown';
+  const [item, setItem] = useState<MenuItem | null>(null);
   const [activeTab, setActiveTab] = useState<'details' | 'modifiers' | 'availability'>('details');
   const [sizeOptions, setSizeOptions] = useState<SizeOption[]>([]);
   const [toppings, setToppings] = useState<Topping[]>([]);
@@ -37,6 +39,7 @@ export function MenuItemModifiersPage() {
     setSizeOptions(data.sizeOptions);
     setToppings(data.toppings);
     setAllowSpecialInstructions(data.allowSpecialInstructions);
+    setItem(getMenuItemById(itemId) ?? null);
   }, [itemId]);
 
   const handleAddSize = () => {
@@ -108,10 +111,12 @@ export function MenuItemModifiersPage() {
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </button>
         <div>
-          <h2 className="text-xl font-semibold text-gray-900">Caesar Salad - Modifiers</h2>
-          <p className="text-sm text-gray-600">
-            Manage sizes, toppings, and customizations
-          </p>
+          <h2 className="text-xl font-semibold text-gray-900">{item ? `${item.name} - Modifiers` : 'Unknown item'}</h2>
+          {item && (
+            <p className="text-sm text-gray-600">
+              {item.description}
+            </p>
+          )}
         </div>
       </div>
 

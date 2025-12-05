@@ -4,7 +4,11 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { validate } from './config/env.validation';
-import { PrismaModule } from '../prisma/prisma.module';
+import { PrismaModule } from './database/prisma.module';
+import { RedisModule } from './modules/redis/redis.module';
+import { EmailModule } from './modules/email/email.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { TenantModule } from './modules/tenant/tenant.module';
 
 @Module({
   imports: [
@@ -39,8 +43,19 @@ import { PrismaModule } from '../prisma/prisma.module';
       // envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
     }),
     PrismaModule,
+    RedisModule,
+    EmailModule,
+    AuthModule,
+    TenantModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Make JwtAuthGuard global (optional, để protect tất cả routes by default)
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: JwtAuthGuard,
+    // },
+  ],
 })
 export class AppModule {}

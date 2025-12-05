@@ -142,7 +142,7 @@ Dưới đây là **5 epics quan trọng nhất** để nắm hệ thống:
 
 **User Stories tiêu biểu:**
 
-- **FR-3-001: Tạo bàn & generate QR**  
+- **FR-3-001 & FR-3-002: Tạo bàn & generate QR**  
   Admin tạo bàn “Table 5” (capacity, location) → hệ thống sinh token, generate QR PNG/SVG + public URL.
 
 - **FR-3-003: Download/Print QR**  

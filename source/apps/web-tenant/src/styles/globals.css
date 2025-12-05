@@ -1,61 +1,125 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-@layer base {
-  :root {
-    --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+:root {
+  /* Emerald - Platform brand */
+  --emerald-50: #ecfdf5;
+  --emerald-100: #d1fae5;
+  --emerald-200: #a7f3d0;
+  --emerald-500: #10b981;
+  --emerald-600: #059669;
+  --emerald-700: #047857;
+
+  /* Orange - Food & CTA accent */
+  --orange-50: #fff7ed;
+  --orange-100: #ffedd5;
+  --orange-500: #f97316;
+  --orange-600: #ea580c;
+
+  /* Amber - Warning states */
+  --amber-100: #fef3c7;
+  --amber-200: #fde68a;
+  --amber-500: #f59e0b;
+  --amber-600: #d97706;
+
+  /* Red - Error states */
+  --red-50: #fef2f2;
+  --red-100: #fee2e2;
+  --red-200: #fecaca;
+  --red-500: #ef4444;
+  --red-600: #dc2626;
+
+  /* Blue - Info states */
+  --blue-50: #eff6ff;
+  --blue-100: #dbeafe;
+  --blue-200: #bfdbfe;
+  --blue-500: #3b82f6;
+  --blue-600: #2563eb;
+
+  /* Neutrals */
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-200: #e5e7eb;
+  --gray-300: #d1d5db;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-900: #111827;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    "Oxygen", "Ubuntu", "Cantarell", sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: var(--gray-50);
+  color: var(--gray-900);
+}
+
+/* Typography hierarchy */
+h1 {
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+}
+
+h2 {
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0;
+}
+
+h3 {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+}
+
+p,
+body {
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 1.5;
+  margin: 0;
+}
+
+label {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+caption,
+small {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+button {
+  font-family: inherit;
+  font-weight: 500;
+}
+
+/* Animations */
+@keyframes slideInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
   }
-
-  * {
-    /* @apply border-border; */
-    @apply border-gray-200;
-  }
-
-  body {
-    /* @apply bg-background text-foreground;
-    font-family: var(--font-sans); */
-    @apply bg-white text-black;
-  }
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
-}
-
-/* Custom scrollbar styles */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  @apply bg-gray-100;
-}
-
-::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400;
-}
-
-/* Loading spinner animation */
-@keyframes spin {
   to {
-    transform: rotate(360deg);
+    transform: translateY(0);
+    opacity: 1;
   }
 }
 
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-
-/* Fade in animation */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -65,52 +129,21 @@
   }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-in;
-}
-
-/* Slide in animation */
-@keyframes slideIn {
+@keyframes scaleIn {
   from {
-    transform: translateX(-10px);
+    transform: scale(0.96);
     opacity: 0;
   }
   to {
-    transform: translateX(0);
+    transform: scale(1);
     opacity: 1;
   }
 }
 
-.animate-slide-in {
-  animation: slideIn 0.3s ease-out;
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
 }
 
-/* Table row hover effect */
-.table-row-hover {
-  @apply hover:bg-gray-50 transition-colors duration-150 cursor-pointer;
-}
-
-/* Status badges */
-.status-badge {
-  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
-}
-
-.status-pending {
-  @apply bg-yellow-100 text-yellow-800;
-}
-
-.status-preparing {
-  @apply bg-blue-100 text-blue-800;
-}
-
-.status-ready {
-  @apply bg-green-100 text-green-800;
-}
-
-.status-completed {
-  @apply bg-gray-100 text-gray-800;
-}
-
-.status-cancelled {
-  @apply bg-red-100 text-red-800;
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out;
 }

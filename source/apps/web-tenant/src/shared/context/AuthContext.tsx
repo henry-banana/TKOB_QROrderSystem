@@ -2,8 +2,8 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-// User role type matching RBAC requirements
-export type UserRole = 'tenant-admin' | 'manager' | 'kitchen' | 'server';
+// User role type matching RBAC requirements (3 roles only)
+export type UserRole = 'admin' | 'kds' | 'waiter';
 
 // TODO: Import from @packages/dto when available
 export interface User {
@@ -20,6 +20,7 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  devLogin: (role: UserRole) => void; // For dev mode quick login
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -41,12 +42,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (token) {
         try {
           // TODO: Validate token with backend and get user data
-          // For now, return a hardcoded tenant-admin user
+          // For now, return a hardcoded admin user
           const mockUser: User = {
             id: '1',
             email: 'admin@example.com',
             name: 'Admin User',
-            role: 'tenant-admin',
+            role: 'admin',
             tenantId: 'tenant-001',
           };
           setUser(mockUser);
@@ -64,13 +65,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = async (email: string, password: string) => {
     // TODO: Implement actual login API call
     try {
-      // Mock login for now - returns tenant-admin by default
+      // Mock login for now - returns admin by default
       const mockToken = 'mock-jwt-token';
       const mockUser: User = {
         id: '1',
         email,
         name: 'Admin User',
-        role: 'tenant-admin',
+        role: 'admin',
         tenantId: 'tenant-001',
       };
 
@@ -90,6 +91,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
+  // Dev mode: instant login with specific role
+  const devLogin = (role: UserRole) => {
+    const roleNames = {
+      admin: 'Admin User',
+      kds: 'Kitchen Display User',
+      waiter: 'Waiter User',
+    };
+
+    const mockToken = `mock-jwt-${role}`;
+    const mockUser: User = {
+      id: role === 'admin' ? '1' : role === 'kds' ? '2' : '3',
+      email: `${role}@restaurant.com`,
+      name: roleNames[role],
+      role,
+      tenantId: 'tenant-001',
+    };
+
+    localStorage.setItem('authToken', mockToken);
+    localStorage.setItem('devRole', role); // Store role for persistence
+    setUser(mockUser);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -98,6 +121,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         isLoading,
         login,
         logout,
+        devLogin,
       }}
     >
       {children}

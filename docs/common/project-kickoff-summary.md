@@ -122,8 +122,17 @@ Dưới đây là **5 epics quan trọng nhất** để nắm hệ thống:
 - **FR-2-001: Admin tạo categories & menu items**  
   Tạo item với name, price, category, image → xuất hiện trong menu tenant.
 
+- **FR-2-002 Publish/Unpublish**  
+  Cho phép Admin kiểm soát việc đưa menu ra phiên bản live cho khách. Các thay đổi về category hoặc item có thể lưu dưới dạng draft, và chỉ khi Admin nhấn Publish thì khách mới nhìn thấy. Admin cũng có thể Unpublish tạm thời một món để ẩn khỏi menu mà không cần xoá.
+
+- **FR-2-003 Update/Delete**  
+  Admin có thể chỉnh sửa thông tin món ăn như tên, mô tả, giá, hình ảnh, category hoặc xoá món khỏi menu. Khi update, hệ thống sẽ cập nhật ngay vào menu của tenant. Khi delete, món được ẩn khỏi menu khách nhưng vẫn giữ trong hệ thống dưới dạng soft delete để phục vụ quản lý lịch sử.
+
 - **FR-2-004: Modifiers**  
   Thêm modifiers group (Size, Extras) để khách chọn khi order; tính lại giá theo option.
+
+- **FR-2-005 Availability Toggle**  
+  Admin có thể bật/tắt trạng thái available của món ăn. Khi một món được đặt thành “Unavailable”, món đó sẽ bị làm mờ hoặc không hiển thị trong menu khách, giúp nhà hàng kiểm soát tình trạng hết món mà không cần chỉnh sửa thông tin món.
 
 ---
 
@@ -133,11 +142,26 @@ Dưới đây là **5 epics quan trọng nhất** để nắm hệ thống:
 
 **User Stories tiêu biểu:**
 
-- **FR-3-001: Tạo bàn & generate QR**  
+- **FR-3-001 & FR-3-002: Tạo bàn & generate QR**  
   Admin tạo bàn “Table 5” (capacity, location) → hệ thống sinh token, generate QR PNG/SVG + public URL.
 
 - **FR-3-003: Download/Print QR**  
   Admin download PDF với QR từng bàn để in; có label table number, hướng dẫn cho khách.
+
+- **FR-3-004 Regenerate QR**  
+  Admin có thể tạo lại QR mới cho một bàn bất kỳ. Khi regenerate, hệ thống sinh token mới (version mới) và toàn bộ QR cũ ngay lập tức hết hiệu lực, đảm bảo an toàn nếu QR bị lộ hoặc bị thay đổi.
+
+- **FR-9-001 Invalid QR Error Pages**  
+  Khi khách scan QR đã hết hạn, không hợp lệ, hoặc bàn bị vô hiệu hoá (inactive), hệ thống trả về trang lỗi thân thiện kèm thông báo:
+  
+  QR không hợp lệ hoặc đã hết hạn
+
+  Bàn đang không khả dụng
+
+  Hướng dẫn khách liên hệ nhân viên
+
+  Giúp khách hàng hiểu rõ vấn đề và tránh bối rối khi QR gặp sự cố.
+
 
 ---
 
@@ -152,8 +176,35 @@ Dưới đây là **5 epics quan trọng nhất** để nắm hệ thống:
   Add items, chọn modifiers, checkout;  
   Order được tạo với status `Received`, staff được notify.
 
+- **FR-4-002 Add to Cart**  
+  Khách hàng có thể thêm món vào giỏ hàng từ menu. Mỗi lần thêm sẽ tăng quantity hoặc tạo item mới trong cart (kèm modifiers). Giỏ hàng được lưu tạm theo session để khách không bị mất dữ liệu khi reload trang.
+
+- **FR-4-003 Modifiers**  
+  Khi chọn món có modifier groups (Size, Toppings, Extras…), khách sẽ chọn các tùy chọn tương ứng. Giá món được tính lại dựa trên các modifiers đã chọn (single-select hoặc multi-select). Món sau khi thêm vào giỏ chứa đầy đủ thông tin modifiers.
+
+- **FR-4-004 Review Cart & Checkout**  
+  Khách có thể xem lại giỏ hàng, chỉnh số lượng, xoá món hoặc tiếp tục chọn món. Ở bước checkout, hệ thống hiển thị subtotal, tax, tổng tiền và thông tin bàn. Đây là bước cuối trước khi khách chọn phương thức thanh toán.
+
+- **FR-4-005 Name & Notes**  
+  Trong màn hình checkout, khách có thể nhập tên và ghi chú (ví dụ “ít đá”, “không cay”). Các thông tin này được lưu kèm order để nhà hàng chuẩn bị chính xác theo yêu cầu.
+
+- **FR-4-006 Submit Order**  
+  Khách xác nhận đặt món, hệ thống tạo order mới và gán trạng thái ban đầu tuỳ theo phương thức thanh toán:
+
+  Nếu thanh toán trước → chờ payment (Pending / PaymentIntent)
+
+  Nếu Bill-to-Table → chuyển thẳng sang Received
+
+  Order sau khi tạo sẽ phát tín hiệu real-time đến KDS.
+
 - **FR-5-001 / FR-5-002: Card payment (Stripe)**  
   Payment Intent via Stripe, UI nhập card details, xử lý thành công/thất bại, update order status `Paid` hoặc cho phép retry.
+
+- **FR-5-003 Payment Confirmation**  
+  Sau khi thanh toán thành công, khách được chuyển đến trang Payment Successful, hiển thị order number, tổng tiền và thời gian dự kiến chuẩn bị. Đây là điểm kết thúc của flow checkout.
+
+- **FR-5-004 Payment Failure Handling**  
+  Nếu thanh toán thất bại (thẻ từ chối, lỗi ngân hàng, mất kết nối…), UI hiển thị lý do và hướng dẫn retry. System cho phép thử lại nhiều lần mà không cần tạo order mới, tránh duplication và giảm nhầm lẫn cho khách hàng.
 
 ---
 
@@ -169,6 +220,28 @@ Dưới đây là **5 epics quan trọng nhất** để nắm hệ thống:
 - **FR-6-002 / FR-6-003: Notifications & real-time**  
   New order → badge/sound trên dashboard;  
   Khách nhìn thấy status cập nhật real-time (WebSocket).
+
+- **FR-6-004 Order Timer**  
+  Khi staff chuyển order sang trạng thái Preparing, hệ thống bắt đầu đếm thời gian chế biến.
+
+  Timer sẽ hiển thị trực tiếp trên giao diện KDS để giúp bếp theo dõi tốc độ xử lý.
+
+  Nếu order vượt ngưỡng (ví dụ 15 phút), hệ thống sẽ highlight (đổi màu sang vàng/đỏ) để nhắc staff ưu tiên xử lý. Tính năng này hỗ trợ theo dõi KPI "Time to Serve".
+
+
+- **FR-9-001 Track Order Status (Customer side)**  
+  Khách hàng sau khi đặt món sẽ được chuyển đến trang Order Tracking, tại đây họ có thể xem trạng thái order của mình theo thời gian thực:
+
+  Received → quán đã nhận order
+
+  Preparing → đang chuẩn bị món
+
+  Ready → món đã sẵn sàng
+
+  Trang theo dõi này auto-update qua WebSocket mà không cần refresh.
+
+  Giúp khách nắm rõ tiến độ và giảm tình trạng hỏi staff “món của tôi đâu rồi?”.
+
 
 ---
 
@@ -213,7 +286,7 @@ Dưới đây là **5 epics quan trọng nhất** để nắm hệ thống:
 
 ### 4.2 Công nghệ (stack) chính
 
-- **Frontend:** Next.js 14, React, TailwindCSS  
+- **Frontend:** Next.js 15, React, TailwindCSS  
 - **Backend:** NestJS (Node.js, TypeScript)  
 - **DB:** PostgreSQL 15+ (Row-Level Security cho tenant isolation)  
 - **Cache:** Redis 7+  

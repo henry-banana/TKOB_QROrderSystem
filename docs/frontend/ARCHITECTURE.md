@@ -19,9 +19,9 @@ The MVP will focus on the essential flows:
 # Frontend Architecture – Unified Restaurant Ordering Platform (Next.js 15+ App Router)
 
 **Project:** QR Dine-in Ordering Platform  
-**Architecture:** Feature-Based Modular Monorepo (Next.js 15+ App Router)  
-**Tech Stack:** Next.js 15+, React 19, TypeScript, TailwindCSS  
-**Last Updated:** 2025-11-21
+**Architecture:** Feature-Based Clean Architecture with Next.js 15 App Router  
+**Tech Stack:** Next.js 15, React 19, TypeScript, TailwindCSS v4  
+**Last Updated:** 2025-11-28
 
 ---
 
@@ -101,24 +101,27 @@ pnpm --filter web-tenant dev
 source/
 ├── apps/
 │   ├── web-tenant/          # Admin/Staff Portal
-│   │   ├── app/
-│   │   │   ├── (admin)/      # Admin routes
-│   │   │   ├── (customer)/   # Customer routes (if any)
-│   │   │   ├── api/          # API routes (if any)
-│   │   │   ├── layout.tsx     # Admin layout
-│   │   │   └── page.tsx      # Admin dashboard page
-│   │   ├── public/           # Static files
 │   │   ├── src/
-│   │   │   ├── features/     # Business features
-│   │   │   ├── shared/       # Shared UI/hooks/utils
-│   │   │   ├── lib/          # API client, providers
-│   │   │   ├── store/        # Global state
+│   │   │   ├── app/          # Next.js 15 App Router (Presentation Layer)
+│   │   │   │   ├── admin/    # Explicit admin route segment: /admin/...
+│   │   │   │   ├── (auth)/   # Route group: Authentication routes
+│   │   │   │   ├── api/      # API routes (optional BFF pattern)
+│   │   │   │   ├── layout.tsx    # Root layout
+│   │   │   │   ├── page.tsx      # Home page with auth redirect
+│   │   │   │   └── providers.tsx # Client-side providers
+│   │   │   ├── features/     # Feature modules (Domain Layer)
+│   │   │   ├── shared/       # Shared/Common layer
+│   │   │   ├── lib/          # Infrastructure layer
+│   │   │   ├── store/        # Global state (Zustand)
 │   │   │   └── styles/       # Global styles
 │   │   ├── package.json
-│   │   └── next.config.js
+│   │   ├── next.config.mjs
+│   │   ├── tailwind.config.cjs
+│   │   └── tsconfig.json
 │   │
 │   ├── web-customer/        # Customer Ordering App
-│   │   ├── app/
+│   │   ├── src/
+│   │   │   ├── app/
 │   │   │   ├── (auth)/       # Authentication routes
 │   │   │   ├── (menu)/       # Menu browsing routes
 │   │   │   ├── (cart)/       # Cart and checkout routes
@@ -129,9 +132,10 @@ source/
 │   │   ├── src/
 │   │   │   ├── features/     # Business features
 │   │   │   ├── shared/       # Shared UI/hooks/utils
-│   │   │   ├── lib/          # API client, providers
+│   │   │   ├── lib/          # Core utilities; routes.ts for path constants
 │   │   │   ├── store/        # Global state
-│   │   │   └── styles/       # Global styles
+│   │   │   ├── styles/       # Global styles
+│   │   │   └── assets/       # Images, fonts
 │   │   ├── package.json
 │   │   └── next.config.js
 │   │
@@ -152,25 +156,35 @@ source/
 
 ## Next.js App Router Structure
 
-### 1. App Directory
+### 1. App Directory (Presentation Layer)
 
-- The `app/` directory contains the application routes, organized by feature.
-- Each feature folder may contain subfolders for components, hooks, services, and types.
+**Purpose**: Handle routing, page rendering, and Next.js-specific concerns only.
 
-### 2. Route Segments
+**Key Principles**:
+- **Thin wrappers**: Pages should import from `features/` and render them
+- **No business logic**: All domain logic lives in `src/features/`
+- **Route groups**: Use `(auth)` for organizing without affecting URLs; use explicit `admin/` segment for admin routes.
+- **Server Components by default**: Use `'use client'` only when needed
 
-- Route segments are defined by folders inside the `app/` directory.
-- Each segment can export `page.tsx` for the main component, `layout.tsx` for shared layout, and special files like `loading.tsx` and `error.tsx`.
+### 2. Route Segments & Special Files
+
+- **page.tsx**: Main page component (Server Component by default)
+- **layout.tsx**: Shared layout for nested routes
+- **loading.tsx**: Streaming UI loading state
+- **error.tsx**: Error boundary for route segment
+- **not-found.tsx**: 404 page
 
 ### 3. Dynamic Routes
 
-- Dynamic routes use square brackets, e.g., `[id]`, to match segments of the URL.
-- Catch-all routes use double square brackets, e.g., `[[...slug]]`, to match multiple segments.
+- Dynamic segments: `[id]`, `[slug]`
+- Optional catch-all: `[[...slug]]`
+- Required catch-all: `[...slug]`
 
-### 4. API Routes
+### 4. API Routes (Optional)
 
-- API routes are defined under `app/api/` and can be accessed via `/api/*` in the URL.
-- Supports RESTful and RPC-style endpoints.
+- Define under `app/api/` for Backend-for-Frontend (BFF) pattern
+- Use when you need server-side logic before calling external APIs
+- Example: `/api/webhook`, `/api/internal/cache-clear`
 
 
 ### 5. Middleware
@@ -195,11 +209,16 @@ source/
 ```
 web-tenant/
 ├── app/
-│   ├── (admin)/
-│   │   ├── layout.tsx
-│   │   ├── page.tsx
-│   │   └── dashboard/
-│   │       └── page.tsx
+│   ├── admin/
+│   │   ├── layout.tsx           # Admin layout with sidebar/navigation
+│   │   ├── dashboard/
+│   │   │   └── page.tsx         # → /admin/dashboard
+│   │   ├── menu/
+│   │   │   └── page.tsx         # → /admin/menu
+│   │   ├── orders/
+│   │   │   └── page.tsx         # → /admin/orders
+│   │   └── tables/
+│   │       └── page.tsx         # → /admin/tables
 │   ├── (auth)/
 │   │   └── login/
 │   │       └── page.tsx
@@ -222,25 +241,34 @@ web-tenant/
 
 **Purpose:** Full-featured management interface for restaurant owners and staff.
 
-### Features Structure
+### Features Structure (Domain Layer)
+
+**Purpose**: Self-contained modules with business logic and feature-specific UI.
+
+**Key Principles**:
+- **Feature isolation**: Each feature owns its components, hooks, types, and API calls
+- **Barrel exports**: Use `index.ts` to expose public API
+- **Can import from**: `shared/`, `lib/`, other features via index
+- **Cannot import from**: `app/` (circular dependency)
 
 ```
 web-tenant/src/features/
 ├── auth/
-│   ├── components/
-│   │   ├── LoginForm.tsx
-│   │   ├── ForgotPasswordForm.tsx
-│   │   └── AuthLayout.tsx
-│   ├── hooks/
+│   ├── components/         # Feature-specific UI components
+│   │   ├── Login.tsx       # Main login screen
+│   │   ├── Signup.tsx
+│   │   ├── EmailVerification.tsx
+│   │   └── OnboardingWizard.tsx
+│   ├── hooks/              # Feature-specific hooks
 │   │   ├── useAuth.ts
 │   │   └── useAuthForm.ts
-│   ├── services/
-│   │   └── authService.ts
-│   ├── types/
+│   ├── api/                # Feature-specific API calls (optional)
+│   │   └── authApi.ts
+│   ├── types/              # Feature types/interfaces
 │   │   └── auth.types.ts
-│   ├── utils/
+│   ├── utils/              # Feature helpers
 │   │   └── authHelpers.ts
-│   └── index.ts
+│   └── index.ts            # Public exports only
 │
 ├── dashboard/
 │   ├── components/
@@ -326,48 +354,53 @@ web-tenant/src/features/
     └── index.ts
 ```
 
-### Shared Components (web-tenant)
+### Shared Layer (Common/Cross-cutting Concerns)
+
+**Purpose**: Reusable code that can be used by any feature.
+
+**Key Principles**:
+- **No feature-specific logic**: Must be generic and reusable
+- **No imports from features**: Only external libs and other shared code
+- **Well-tested**: Should have high test coverage
 
 ```
 web-tenant/src/shared/
 ├── components/
-│   ├── ui/                    # Atoms (buttons, inputs, cards)
-│   │   ├── Button.tsx
-│   │   ├── Input.tsx
-│   │   ├── Select.tsx
+│   ├── ui/                    # Reusable UI primitives
+│   │   ├── Button.tsx         # Generic button component
+│   │   ├── Input.tsx          # Generic input component
+│   │   ├── Card.tsx           # Generic card container
 │   │   ├── Modal.tsx
-│   │   ├── Table.tsx
-│   │   ├── Tabs.tsx
-│   │   └── index.ts
-│   ├── layout/                # Admin layouts
+│   │   └── index.ts           # Barrel exports
+│   ├── layouts/               # Layout components
 │   │   ├── AdminLayout.tsx
-│   │   ├── Sidebar.tsx
-│   │   ├── Header.tsx
-│   │   ├── Breadcrumb.tsx
+│   │   ├── AuthLayout.tsx
 │   │   └── index.ts
-│   └── common/                # Reusable components
-│       ├── ErrorBoundary.tsx
-│       ├── LoadingState.tsx
-│       ├── EmptyState.tsx
+│   └── auth/                  # Shared auth components
+│       ├── RoleGuard.tsx      # RBAC guard component
 │       └── index.ts
 │
-├── hooks/
+├── context/                   # Global React contexts
+│   ├── AuthContext.tsx        # Auth state & methods
+│   ├── ThemeContext.tsx       # Theme provider
+│   └── index.ts
+│
+├── hooks/                     # Shared custom hooks
 │   ├── useDebounce.ts
 │   ├── useLocalStorage.ts
 │   ├── useMediaQuery.ts
-│   ├── usePermissions.ts
 │   └── index.ts
 │
-├── utils/
-│   ├── format.ts
-│   ├── validation.ts
-│   ├── constants.ts
-│   ├── permissions.ts
+├── utils/                     # Helper/utility functions
+│   ├── format.ts              # formatCurrency, formatDate
+│   ├── validation.ts          # Validation helpers
+│   ├── constants.ts           # App constants
 │   └── index.ts
 │
-└── types/
+└── types/                     # Shared TypeScript types
     ├── common.types.ts
-    └── api.types.ts
+    ├── api.types.ts
+    └── index.ts
 ```
 
 ### Key Features
@@ -412,7 +445,7 @@ The web-tenant app enforces role-based access control (RBAC) for all sensitive r
 - `server`: Access to order-taking and table management
 
 **Route Groups & Access:**
-- `(admin)`: Accessible by `tenant-admin`, `manager`
+- `admin/*`: Accessible by `tenant-admin`, `manager`
 - `(kitchen)`: Accessible by `kitchen` (KDS)
 - `(server)`: Accessible by `server` (order-taking)
 
@@ -1945,6 +1978,17 @@ jobs:
 
 ---
 
+## Path Aliases & Conventions
+
+For both apps, use:
+
+- `@/*` → `./src/*`
+- `@/app/*` → `./src/app/*`
+
+Remove legacy `src/pages/` to avoid conflicts with the App Router.
+
+Page files should stay thin and import UI/logic from `src/features/*`.
+
 ## Migration Path
 
 ### From Single App to Split Apps
@@ -2070,6 +2114,20 @@ module.exports = {
 - [React Testing Library](https://testing-library.com/react)
 
 ---
+
+## Related Guides
+
+Các guide hỗ trợ thực thi và onboarding nằm trong `docs/frontend/guide/`:
+
+| File | Nội dung |
+|------|----------|
+| `guide/ONBOARDING_CHECKLIST.md` | Checklist nhanh & nhiệm vụ đầu tiên |
+| `guide/NEXTJS_15_APP_ROUTER_GUIDE.md` | App Router, Server/Client Components, middleware |
+| `guide/PATTERNS_AND_CONVENTIONS.md` | Quy ước cấu trúc feature, hooks, services, import rules |
+| `guide/FEATURE_IMPLEMENTATION_GUIDE.md` | Ví dụ triển khai Analytics Dashboard đầy đủ |
+| `guide/README.md` | Mục lục & định hướng đọc |
+
+Thứ tự đọc khuyến nghị: Checklist → App Router → Patterns → Feature Example → (tài liệu kiến trúc này).
 
 ## Changelog
 

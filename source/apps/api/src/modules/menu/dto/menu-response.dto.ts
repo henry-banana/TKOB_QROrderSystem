@@ -23,6 +23,49 @@ export class MenuCategoryResponseDto {
   updatedAt: Date;
 }
 
+export class ModifierOptionResponseDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiProperty()
+  priceDelta: number;
+
+  @ApiProperty()
+  displayOrder: number;
+
+  @ApiProperty()
+  active: boolean;
+}
+
+export class ModifierGroupResponseDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  name: string;
+
+  @ApiPropertyOptional()
+  description?: string;
+
+  @ApiProperty()
+  type: string;
+
+  @ApiProperty()
+  required: boolean;
+
+  @ApiProperty()
+  minChoices: number;
+
+  @ApiPropertyOptional()
+  maxChoices?: number;
+
+  @ApiProperty({ type: [ModifierOptionResponseDto] })
+  options: ModifierOptionResponseDto[];
+}
+
 export class MenuItemResponseDto {
   @ApiProperty()
   id: string;

@@ -69,14 +69,16 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   // --- PRISMA EXTENSION (Thay thế Middleware $use) ---
 
   private createExtendedClient() {
+    // QUAN TRỌNG: Capture `this` context TRƯỚC KHI vào extension
+    const self = this;
+
     return this.$extends({
       query: {
         $allModels: {
           async $allOperations({ model, operation, args, query }) {
-            // 1. Lấy Tenant ID từ Async Context
-            const tenantId = this.getTenantId();
+            // Dùng `self` thay vì `this`
+            const tenantId = self.getTenantId();
 
-            // Danh sách các bảng cần isolate
             const tenantModels = [
               'User',
               'Table',
@@ -89,15 +91,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
               'OrderActivityLog',
             ];
 
-            // Nếu không có tenantId hoặc model không nằm trong danh sách -> chạy query gốc
             if (!tenantId || !tenantModels.includes(model as string)) {
               return query(args);
             }
 
-            // 2. Inject Tenant ID vào args
-            const _args = args as any; // Cast any để dễ thao tác object
+            const _args = args as any;
 
-            // Xử lý logic chèn tenantId tương tự middleware cũ
             if (
               [
                 'findUnique',
@@ -112,10 +111,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
                 'deleteMany',
               ].includes(operation)
             ) {
-              // Cẩn thận với findUnique: Prisma yêu cầu where của findUnique chỉ được chứa unique fields.
-              // Nếu bạn chèn tenantId vào findUnique, nó sẽ biến thành findFirst (về mặt logic Prisma).
-              // Ở đây ta xử lý đơn giản là merge vào where.
-
               _args.where = {
                 ..._args.where,
                 tenantId: tenantId,
@@ -129,7 +124,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
               };
             }
 
-            // Note: Với createMany, args.data là array
             if (operation === 'createMany') {
               if (Array.isArray(_args.data)) {
                 _args.data = _args.data.map((item: any) => ({ ...item, tenantId }));
@@ -138,7 +132,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
               }
             }
 
-            // 3. Thực thi query với args đã sửa đổi
             return query(_args);
           },
         },

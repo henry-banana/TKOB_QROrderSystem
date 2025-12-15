@@ -9,18 +9,14 @@ import { Reflector } from '@nestjs/core';
 
 /**
  * Tenant Ownership Guard
- * 
- * Purpose: Verify that the authenticated user has permission to access the tenant resource
- * 
- * Logic:
- * 1. Extract tenantId from route params (e.g., /tenants/:id)
- * 2. Compare with tenantId from JWT (req.user.tenantId)
- * 3. Block request if they don't match (user trying to access another tenant's data)
- * 
- * Usage: Apply to tenant-specific routes
- * @UseGuards(JwtAuthGuard, TenantOwnershipGuard)
+ *
+ * Verifies that authenticated user can only access their own tenant's data
+ *
+ * Security layers:
+ * 1. Middleware: Sets req.tenant.id from JWT/header
+ * 2. Guard: Validates user.tenantId matches req.tenant.id
+ * 3. Prisma: Auto-filters queries by tenantId via RLS
  */
-
 @Injectable()
 export class TenantOwnershipGuard implements CanActivate {
   private readonly logger = new Logger(TenantOwnershipGuard.name);
@@ -30,27 +26,37 @@ export class TenantOwnershipGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
-    const params = request.params;
 
-    // Check if route has tenantId parameter
-    if (!params.id) {
-      this.logger.warn('TenantOwnershipGuard applied but no :id param found');
-      return true; // Skip validation if no tenant ID in route
-    }
-
-    // Check if user context exists
+    // Check if user context exists (JWT verified by JwtAuthGuard)
     if (!user || !user.tenantId) {
       throw new ForbiddenException('User context not found');
     }
 
-    // Verify ownership
-    const requestedTenantId = params.id;
     const userTenantId = user.tenantId;
 
+    // Extract tenant context from middleware or header
+    let requestedTenantId: string | undefined;
+
+    // Priority 1: From tenant context middleware (most reliable)
+    if (request.tenant?.id) {
+      requestedTenantId = request.tenant.id;
+    }
+    // Priority 2: From explicit header (for service-to-service calls)
+    else if (request.headers['x-tenant-id']) {
+      requestedTenantId = request.headers['x-tenant-id'] as string;
+    }
+
+    // If no tenant context, allow (global routes like /health)
+    if (!requestedTenantId) {
+      this.logger.debug(`No tenant context for user ${user.userId}, allowing access`);
+      return true;
+    }
+
+    // Verify tenant ownership
     if (requestedTenantId !== userTenantId) {
       this.logger.warn(
         `Tenant ownership violation: User ${user.userId} (tenant: ${userTenantId}) ` +
-        `attempted to access tenant ${requestedTenantId}`,
+          `attempted to access tenant ${requestedTenantId}`,
       );
       throw new ForbiddenException('You do not have permission to access this tenant');
     }

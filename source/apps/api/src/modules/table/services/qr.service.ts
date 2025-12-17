@@ -30,7 +30,7 @@ export class QrService {
   ) {
     // Load config với fallback values
     this.secret = this.config.get('JWT_SECRET', { infer: true }) || 'fallback-secret-key-change-in-production';
-    this.customerAppUrl = this.config.get('CUSTOMER_APP_URL', { infer: true }) || 'http://localhost:3001';
+    this.customerAppUrl = this.config.get('CUSTOMER_APP_URL', { infer: true }) || 'http://localhost:3000';
     this.maxAgeInDays = 365; // QR codes valid for 1 year by default
   }
 

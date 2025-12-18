@@ -18,7 +18,7 @@ export function KPICard({ title, value, icon: Icon, trend }: KPICardProps) {
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-2">
           <span className="text-gray-500" style={{ fontSize: '14px', fontWeight: 500 }}>{title}</span>
-          <span className="text-gray-900" style={{ fontSize: '28px', fontWeight: 700, lineHeight: 1.2 }}>{value}</span>
+          <span className="text-gray-900" style={{ fontSize: '28px', fontWeight: 700, lineHeight: '1.2' }}>{value}</span>
           {trend && (
             <div className="flex items-center gap-1">
               {trend.isPositive ? (

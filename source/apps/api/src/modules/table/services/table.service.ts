@@ -35,7 +35,7 @@ export class TableService {
         tenantId,
         tableNumber: dto.tableNumber,
         capacity: dto.capacity,
-        location: dto.location,
+        location: dto.location?.toLowerCase() || null, // Normalize location to lowercase
         description: dto.description,
         displayOrder: dto.displayOrder ?? 0,
         status: TableStatus.AVAILABLE,
@@ -98,7 +98,12 @@ export class TableService {
     }
 
     try {
-      return await this.repo.update(tableId, dto);
+      // Normalize location to lowercase if provided
+      const updateData = {
+        ...dto,
+        ...(dto.location && { location: dto.location.toLowerCase() }),
+      };
+      return await this.repo.update(tableId, updateData);
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         throw new ConflictException(`Table number "${dto.tableNumber}" already exists`);

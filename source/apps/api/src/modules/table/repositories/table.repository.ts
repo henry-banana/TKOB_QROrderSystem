@@ -26,7 +26,13 @@ export class TableRepository extends BaseRepository<Table, Prisma.TableDelegate>
       tenantId,
       ...(options?.activeOnly !== undefined && { active: options.activeOnly }),
       ...(options?.status && { status: options.status }),
-      ...(options?.location && { location: options.location }),
+      // Case-insensitive location filter (also include NULL for 'indoor' since that's the default)
+      ...(options?.location && { 
+        OR: [
+          { location: { equals: options.location, mode: 'insensitive' } },
+          ...(options.location.toLowerCase() === 'indoor' ? [{ location: null }] : []),
+        ]
+      }),
     };
 
     const orderBy: Prisma.TableOrderByWithRelationInput = options?.sortBy

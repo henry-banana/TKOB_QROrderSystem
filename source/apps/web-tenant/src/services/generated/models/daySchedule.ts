@@ -6,8 +6,8 @@
  * OpenAPI spec version: 1.0
  */
 
-export interface RegisterSubmitResponseDto {
-  expiresIn: number;
-  message: string;
-  registrationToken: string;
+export interface DaySchedule {
+  close: string;
+  closed: boolean;
+  open: string;
 }

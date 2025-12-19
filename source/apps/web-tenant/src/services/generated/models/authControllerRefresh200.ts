@@ -6,8 +6,6 @@
  * OpenAPI spec version: 1.0
  */
 
-export interface RegisterSubmitResponseDto {
-  expiresIn: number;
-  message: string;
-  registrationToken: string;
-}
+export type AuthControllerRefresh200 = {
+  accessToken?: string;
+};

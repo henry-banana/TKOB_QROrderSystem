@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 import { Card } from '@/shared/components/ui/Card';
@@ -22,7 +23,8 @@ export function Login({ onNavigate }: LoginProps) {
   const [rememberMe, setRememberMe] = useState(false);
   const [language, setLanguage] = useState('EN');
   const [serverError, setServerError] = useState<string | null>(null);
-  const { devLogin } = useAuth();
+  const { devLogin, login, getDefaultRoute } = useAuth();
+  const router = useRouter();
   const isDev = config.useMockData;
 
   const {
@@ -37,7 +39,7 @@ export function Login({ onNavigate }: LoginProps) {
     },
   });
 
-  const onSubmit = async (_data: LoginFormData) => {
+  const onSubmit = async (data: LoginFormData) => {
     try {
       setServerError(null);
       
@@ -47,17 +49,32 @@ export function Login({ onNavigate }: LoginProps) {
         return;
       }
 
-      // In production, this would call real authentication API
-      // TODO: Replace with actual API call using _data
-      // Example: await authService.login(_data.email, _data.password);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call real backend API through AuthContext
+      console.log('[Login] Calling login with:', data.email);
+      await login(data.email, data.password);
       
-      // Simulate error for demo (remove in real implementation)
-      // throw new Error('Invalid credentials');
+      console.log('[Login] Login successful, checking localStorage:', {
+        hasToken: !!localStorage.getItem('authToken'),
+        tokenLength: localStorage.getItem('authToken')?.length,
+      });
       
-      onNavigate?.(ROUTES.dashboard);
-    } catch {
-      setServerError('Wrong Email or Username');
+      // Navigate to user's default route based on role
+      const defaultRoute = getDefaultRoute();
+      console.log('[Login] Navigating to:', defaultRoute);
+      router.push(defaultRoute);
+    } catch (error: unknown) {
+      console.error('[Login] Login failed:', error);
+      
+      // Show detailed error in development
+      if (isDev && error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { data?: { message?: string } } };
+        if (axiosError.response?.data?.message) {
+          setServerError(`Login failed: ${axiosError.response.data.message}`);
+          return;
+        }
+      }
+      
+      setServerError('Wrong Email or Password. Please try again.');
     }
   };
 
@@ -104,6 +121,14 @@ export function Login({ onNavigate }: LoginProps) {
 
           {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+            {/* Info Message for Testing */}
+            <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+              <p className="text-blue-700 text-sm">
+                <strong>Test Account:</strong> You need a registered account to login. 
+                {' '}Use Sign Up to create one, or check your database for existing users.
+              </p>
+            </div>
+
             {/* Server Error Message */}
             {serverError && (
               <div className="p-3 rounded-lg bg-red-50 border border-red-200">

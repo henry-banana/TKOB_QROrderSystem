@@ -6,6 +6,7 @@ import { ROUTES } from '@/lib/routes';
 import { getHomeRouteForRole, canAccessRoute } from '@/lib/navigation';
 import type { UserRole as NavigationUserRole } from '@/lib/navigation';
 import { useLogin, useLogout, useCurrentUser } from '@/features/auth/hooks/useAuth';
+import { config } from '@/lib/config';
 
 // User role type matching RBAC requirements (3 roles only)
 export type UserRole = 'admin' | 'kds' | 'waiter';
@@ -25,8 +26,8 @@ interface AuthContextValue {
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  devLogin: (role: UserRole) => void; // For dev mode quick login
-  switchRole: (role: UserRole) => void; // Dev mode role switching
+  devLogin: (role: UserRole) => void; // For dev mode quick login - ONLY in mock mode
+  switchRole: (role: UserRole) => void; // Dev mode role switching - ONLY in mock mode
   getDefaultRoute: () => string; // Get home route for current user role
   canAccess: (path: string) => boolean; // Check if current user can access path
 }
@@ -75,11 +76,26 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const login = async (email: string, password: string) => {
     try {
-      await loginMutation.mutateAsync({ email, password });
+      const deviceInfo = typeof window !== 'undefined' 
+        ? `${navigator.userAgent} | ${navigator.platform}`
+        : 'Unknown device';
+      
+      console.log('[AuthContext] Starting login for:', email);
+      
+      await loginMutation.mutateAsync({ 
+        email, 
+        password,
+        deviceInfo,
+      });
+      
+      console.log('[AuthContext] Login mutation successful, refetching user...');
+      
       // Refetch current user after successful login
       await refetch();
+      
+      console.log('[AuthContext] Login complete');
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('[AuthContext] Login failed:', error);
       throw error;
     }
   };
@@ -106,10 +122,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  // Dev mode quick login - bypasses API
+  // Dev mode quick login - bypasses API (ONLY available in mock data mode)
   const devLogin = (role: UserRole) => {
+    if (!config.useMockData) {
+      console.warn('❌ devLogin is DISABLED in production mode (NEXT_PUBLIC_USE_MOCK_DATA=false)');
+      console.warn('ℹ️  To enable dev mode, set NEXT_PUBLIC_USE_MOCK_DATA=true in .env');
+      return;
+    }
+
     if (process.env.NODE_ENV !== 'development') {
-      console.warn('devLogin only available in development');
+      console.warn('devLogin only available in development environment');
       return;
     }
 
@@ -160,9 +182,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  // Dev mode: Switch role on the fly
+  // Dev mode: Switch role on the fly (ONLY available in mock data mode)
   const switchRole = useCallback(
     (role: UserRole) => {
+      if (!config.useMockData) {
+        console.warn('❌ switchRole is DISABLED in production mode (NEXT_PUBLIC_USE_MOCK_DATA=false)');
+        console.warn('ℹ️  To enable dev mode, set NEXT_PUBLIC_USE_MOCK_DATA=true in .env');
+        return;
+      }
+
       if (process.env.NODE_ENV !== 'development') {
         console.warn('Role switching only available in development');
         return;

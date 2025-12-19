@@ -5,13 +5,14 @@
  * API Documentation for QR Ordering Platform
  * OpenAPI spec version: 1.0
  */
-import type { AuthResponseDtoTenant } from './authResponseDtoTenant';
-import type { AuthResponseDtoUser } from './authResponseDtoUser';
+import type { AuthTenantResponseDto } from './authTenantResponseDto';
+import type { AuthUserResponseDto } from './authUserResponseDto';
 
 export interface AuthResponseDto {
-  accessToken?: string;
-  expiresIn?: number;
-  refreshToken?: string;
-  tenant?: AuthResponseDtoTenant;
-  user?: AuthResponseDtoUser;
+  accessToken: string;
+  /** Access token expiration time in seconds */
+  expiresIn: number;
+  refreshToken: string;
+  tenant?: AuthTenantResponseDto;
+  user: AuthUserResponseDto;
 }

@@ -122,7 +122,7 @@ export class AuthMockAdapter implements IAuthAdapter {
     };
   }
 
-  async logout(data: LogoutDto): Promise<void> {
+  async logout(_data: LogoutDto): Promise<void> {
     await fakeDelay();
     // Mock logout always succeeds
   }

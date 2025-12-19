@@ -11,8 +11,6 @@ import type {
   RegisterSubmitDto,
   RegisterSubmitResponseDto,
   RegisterConfirmDto,
-  RefreshTokenDto,
-  LogoutDto,
 } from '@/services/generated/models';
 
 class AuthService {

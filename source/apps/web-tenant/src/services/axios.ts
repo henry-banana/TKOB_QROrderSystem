@@ -35,7 +35,14 @@ api.interceptors.response.use(
 
 // Orval custom mutator function
 export const customInstance = <T>(config: any): Promise<T> => {
-  return api(config).then(({ data }) => data);
+  return api(config).then(({ data }) => {
+    // Backend wraps response in { success: true, data: {...} }
+    // Unwrap it to return the actual data
+    if (data && typeof data === 'object' && 'data' in data) {
+      return data.data as T;
+    }
+    return data;
+  });
 };
 
 export default api;

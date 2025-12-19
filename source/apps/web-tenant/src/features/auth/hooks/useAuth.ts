@@ -19,13 +19,29 @@ export const useLogin = () => {
   return useMutation({
     mutationFn: (credentials: LoginDto) => authService.login(credentials),
     onSuccess: (data) => {
-      // Store auth token
+      console.log('[useLogin] Login successful, storing tokens:', {
+        hasAccessToken: !!data.accessToken,
+        hasRefreshToken: !!data.refreshToken,
+        expiresIn: data.expiresIn,
+      });
+      
+      // Store auth token in both localStorage and cookie
       if (typeof window !== 'undefined') {
+        // localStorage for client-side access
         localStorage.setItem('authToken', data.accessToken);
-        document.cookie = `refreshToken=${data.refreshToken}; path=/; max-age=${data.expiresIn}`;
+        
+        // Cookie for server-side middleware access
+        const maxAge = data.expiresIn || 3600; // Default 1 hour
+        document.cookie = `authToken=${data.accessToken}; path=/; max-age=${maxAge}; SameSite=Lax`;
+        document.cookie = `refreshToken=${data.refreshToken}; path=/; max-age=${maxAge * 7}; SameSite=Lax`; // Refresh token lasts longer
+        
+        console.log('[useLogin] Tokens stored in localStorage and cookies');
       }
       // Invalidate current user query
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
+    },
+    onError: (error) => {
+      console.error('[useLogin] Login failed:', error);
     },
   });
 };
@@ -48,10 +64,12 @@ export const useRegisterConfirm = () => {
   return useMutation({
     mutationFn: (data: RegisterConfirmDto) => authService.registerConfirm(data),
     onSuccess: (data) => {
-      // Store auth token
+      // Store auth token in both localStorage and cookie
       if (typeof window !== 'undefined') {
         localStorage.setItem('authToken', data.accessToken);
-        document.cookie = `refreshToken=${data.refreshToken}; path=/; max-age=${data.expiresIn}`;
+        const maxAge = data.expiresIn || 3600;
+        document.cookie = `authToken=${data.accessToken}; path=/; max-age=${maxAge}; SameSite=Lax`;
+        document.cookie = `refreshToken=${data.refreshToken}; path=/; max-age=${maxAge * 7}; SameSite=Lax`;
       }
       // Invalidate current user query
       queryClient.invalidateQueries({ queryKey: ['currentUser'] });
@@ -86,7 +104,9 @@ export const useLogout = () => {
       // Clear auth data
       if (typeof window !== 'undefined') {
         localStorage.removeItem('authToken');
-        document.cookie = 'refreshToken=; path=/; max-age=0';
+        // Clear both authToken and refreshToken cookies
+        document.cookie = 'authToken=; path=/; max-age=0; SameSite=Lax';
+        document.cookie = 'refreshToken=; path=/; max-age=0; SameSite=Lax';
       }
       // Clear all queries
       queryClient.clear();
@@ -106,7 +126,9 @@ export const useLogoutAll = () => {
       // Clear auth data
       if (typeof window !== 'undefined') {
         localStorage.removeItem('authToken');
-        document.cookie = 'refreshToken=; path=/; max-age=0';
+        // Clear both authToken and refreshToken cookies
+        document.cookie = 'authToken=; path=/; max-age=0; SameSite=Lax';
+        document.cookie = 'refreshToken=; path=/; max-age=0; SameSite=Lax';
       }
       // Clear all queries
       queryClient.clear();

@@ -19,6 +19,8 @@ import type {
   UseQueryResult
 } from '@tanstack/react-query'
 import type {
+  AuthControllerGetMe200,
+  AuthControllerRefresh200,
   AuthResponseDto,
   LoginDto,
   LogoutDto,
@@ -32,6 +34,7 @@ import { customInstance } from '../../axios';
 
 
 /**
+ * Validates registration data, stores temporarily in Redis, and sends OTP to email
  * @summary Step 1: Submit registration & receive OTP
  */
 export const authControllerRegisterSubmit = (
@@ -49,7 +52,7 @@ export const authControllerRegisterSubmit = (
   
 
 
-export const getAuthControllerRegisterSubmitMutationOptions = <TError = unknown,
+export const getAuthControllerRegisterSubmitMutationOptions = <TError = void,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerRegisterSubmit>>, TError,{data: RegisterSubmitDto}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof authControllerRegisterSubmit>>, TError,{data: RegisterSubmitDto}, TContext> => {
 const {mutation: mutationOptions} = options ?? {};
@@ -70,12 +73,12 @@ const {mutation: mutationOptions} = options ?? {};
 
     export type AuthControllerRegisterSubmitMutationResult = NonNullable<Awaited<ReturnType<typeof authControllerRegisterSubmit>>>
     export type AuthControllerRegisterSubmitMutationBody = RegisterSubmitDto
-    export type AuthControllerRegisterSubmitMutationError = unknown
+    export type AuthControllerRegisterSubmitMutationError = void
 
     /**
  * @summary Step 1: Submit registration & receive OTP
  */
-export const useAuthControllerRegisterSubmit = <TError = unknown,
+export const useAuthControllerRegisterSubmit = <TError = void,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerRegisterSubmit>>, TError,{data: RegisterSubmitDto}, TContext>, }
 ): UseMutationResult<
         Awaited<ReturnType<typeof authControllerRegisterSubmit>>,
@@ -89,6 +92,7 @@ export const useAuthControllerRegisterSubmit = <TError = unknown,
       return useMutation(mutationOptions);
     }
     /**
+ * Verifies OTP, creates Tenant & User, returns auth tokens
  * @summary Step 2: Confirm OTP & create account
  */
 export const authControllerRegisterConfirm = (
@@ -106,7 +110,7 @@ export const authControllerRegisterConfirm = (
   
 
 
-export const getAuthControllerRegisterConfirmMutationOptions = <TError = unknown,
+export const getAuthControllerRegisterConfirmMutationOptions = <TError = void,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerRegisterConfirm>>, TError,{data: RegisterConfirmDto}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof authControllerRegisterConfirm>>, TError,{data: RegisterConfirmDto}, TContext> => {
 const {mutation: mutationOptions} = options ?? {};
@@ -127,12 +131,12 @@ const {mutation: mutationOptions} = options ?? {};
 
     export type AuthControllerRegisterConfirmMutationResult = NonNullable<Awaited<ReturnType<typeof authControllerRegisterConfirm>>>
     export type AuthControllerRegisterConfirmMutationBody = RegisterConfirmDto
-    export type AuthControllerRegisterConfirmMutationError = unknown
+    export type AuthControllerRegisterConfirmMutationError = void
 
     /**
  * @summary Step 2: Confirm OTP & create account
  */
-export const useAuthControllerRegisterConfirm = <TError = unknown,
+export const useAuthControllerRegisterConfirm = <TError = void,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerRegisterConfirm>>, TError,{data: RegisterConfirmDto}, TContext>, }
 ): UseMutationResult<
         Awaited<ReturnType<typeof authControllerRegisterConfirm>>,
@@ -146,6 +150,7 @@ export const useAuthControllerRegisterConfirm = <TError = unknown,
       return useMutation(mutationOptions);
     }
     /**
+ * Authenticate user with email and password
  * @summary User login
  */
 export const authControllerLogin = (
@@ -163,7 +168,7 @@ export const authControllerLogin = (
   
 
 
-export const getAuthControllerLoginMutationOptions = <TError = unknown,
+export const getAuthControllerLoginMutationOptions = <TError = void,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerLogin>>, TError,{data: LoginDto}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof authControllerLogin>>, TError,{data: LoginDto}, TContext> => {
 const {mutation: mutationOptions} = options ?? {};
@@ -184,12 +189,12 @@ const {mutation: mutationOptions} = options ?? {};
 
     export type AuthControllerLoginMutationResult = NonNullable<Awaited<ReturnType<typeof authControllerLogin>>>
     export type AuthControllerLoginMutationBody = LoginDto
-    export type AuthControllerLoginMutationError = unknown
+    export type AuthControllerLoginMutationError = void
 
     /**
  * @summary User login
  */
-export const useAuthControllerLogin = <TError = unknown,
+export const useAuthControllerLogin = <TError = void,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerLogin>>, TError,{data: LoginDto}, TContext>, }
 ): UseMutationResult<
         Awaited<ReturnType<typeof authControllerLogin>>,
@@ -203,6 +208,7 @@ export const useAuthControllerLogin = <TError = unknown,
       return useMutation(mutationOptions);
     }
     /**
+ * Generate new access token using valid refresh token
  * @summary Refresh access token
  */
 export const authControllerRefresh = (
@@ -210,7 +216,7 @@ export const authControllerRefresh = (
  ) => {
       
       
-      return customInstance<void>(
+      return customInstance<AuthControllerRefresh200>(
       {url: `/api/v1/auth/refresh`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: refreshTokenDto
@@ -220,7 +226,7 @@ export const authControllerRefresh = (
   
 
 
-export const getAuthControllerRefreshMutationOptions = <TError = unknown,
+export const getAuthControllerRefreshMutationOptions = <TError = void,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerRefresh>>, TError,{data: RefreshTokenDto}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof authControllerRefresh>>, TError,{data: RefreshTokenDto}, TContext> => {
 const {mutation: mutationOptions} = options ?? {};
@@ -241,12 +247,12 @@ const {mutation: mutationOptions} = options ?? {};
 
     export type AuthControllerRefreshMutationResult = NonNullable<Awaited<ReturnType<typeof authControllerRefresh>>>
     export type AuthControllerRefreshMutationBody = RefreshTokenDto
-    export type AuthControllerRefreshMutationError = unknown
+    export type AuthControllerRefreshMutationError = void
 
     /**
  * @summary Refresh access token
  */
-export const useAuthControllerRefresh = <TError = unknown,
+export const useAuthControllerRefresh = <TError = void,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerRefresh>>, TError,{data: RefreshTokenDto}, TContext>, }
 ): UseMutationResult<
         Awaited<ReturnType<typeof authControllerRefresh>>,
@@ -260,6 +266,7 @@ export const useAuthControllerRefresh = <TError = unknown,
       return useMutation(mutationOptions);
     }
     /**
+ * Revoke refresh token and end session
  * @summary Logout user
  */
 export const authControllerLogout = (
@@ -277,7 +284,7 @@ export const authControllerLogout = (
   
 
 
-export const getAuthControllerLogoutMutationOptions = <TError = unknown,
+export const getAuthControllerLogoutMutationOptions = <TError = void,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerLogout>>, TError,{data: LogoutDto}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof authControllerLogout>>, TError,{data: LogoutDto}, TContext> => {
 const {mutation: mutationOptions} = options ?? {};
@@ -298,12 +305,12 @@ const {mutation: mutationOptions} = options ?? {};
 
     export type AuthControllerLogoutMutationResult = NonNullable<Awaited<ReturnType<typeof authControllerLogout>>>
     export type AuthControllerLogoutMutationBody = LogoutDto
-    export type AuthControllerLogoutMutationError = unknown
+    export type AuthControllerLogoutMutationError = void
 
     /**
  * @summary Logout user
  */
-export const useAuthControllerLogout = <TError = unknown,
+export const useAuthControllerLogout = <TError = void,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authControllerLogout>>, TError,{data: LogoutDto}, TContext>, }
 ): UseMutationResult<
         Awaited<ReturnType<typeof authControllerLogout>>,
@@ -317,6 +324,7 @@ export const useAuthControllerLogout = <TError = unknown,
       return useMutation(mutationOptions);
     }
     /**
+ * Revoke all refresh tokens for the user
  * @summary Logout from all devices
  */
 export const authControllerLogoutAll = (
@@ -372,6 +380,7 @@ export const useAuthControllerLogoutAll = <TError = unknown,
       return useMutation(mutationOptions);
     }
     /**
+ * Retrieve authenticated user information and tenant details
  * @summary Get current user profile
  */
 export const authControllerGetMe = (
@@ -380,7 +389,7 @@ export const authControllerGetMe = (
 ) => {
       
       
-      return customInstance<void>(
+      return customInstance<AuthControllerGetMe200>(
       {url: `/api/v1/auth/me`, method: 'GET', signal
     },
       );
@@ -392,7 +401,7 @@ export const getAuthControllerGetMeQueryKey = () => {
     }
 
     
-export const getAuthControllerGetMeQueryOptions = <TData = Awaited<ReturnType<typeof authControllerGetMe>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerGetMe>>, TError, TData>>, }
+export const getAuthControllerGetMeQueryOptions = <TData = Awaited<ReturnType<typeof authControllerGetMe>>, TError = void>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerGetMe>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
@@ -411,12 +420,12 @@ const {query: queryOptions} = options ?? {};
 }
 
 export type AuthControllerGetMeQueryResult = NonNullable<Awaited<ReturnType<typeof authControllerGetMe>>>
-export type AuthControllerGetMeQueryError = unknown
+export type AuthControllerGetMeQueryError = void
 
 /**
  * @summary Get current user profile
  */
-export const useAuthControllerGetMe = <TData = Awaited<ReturnType<typeof authControllerGetMe>>, TError = unknown>(
+export const useAuthControllerGetMe = <TData = Awaited<ReturnType<typeof authControllerGetMe>>, TError = void>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authControllerGetMe>>, TError, TData>>, }
 
   ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } => {

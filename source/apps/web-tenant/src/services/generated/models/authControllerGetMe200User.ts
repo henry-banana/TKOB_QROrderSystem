@@ -6,8 +6,10 @@
  * OpenAPI spec version: 1.0
  */
 
-export interface RegisterSubmitResponseDto {
-  expiresIn: number;
-  message: string;
-  registrationToken: string;
-}
+export type AuthControllerGetMe200User = {
+  email?: string;
+  fullName?: string;
+  id?: string;
+  role?: string;
+  tenantId?: string;
+};

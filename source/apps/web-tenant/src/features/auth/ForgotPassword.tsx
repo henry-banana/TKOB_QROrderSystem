@@ -4,6 +4,8 @@ import { Input } from '@/shared/components/ui/Input';
 import { Card } from '@/shared/components/ui/Card';
 import { QrCode } from 'lucide-react';
 import { ROUTES } from '@/lib/routes';
+import { authService } from './services';
+import { toast } from 'sonner';
 import "../../styles/globals.css";
 
 interface ForgotPasswordProps {
@@ -14,11 +16,31 @@ export function ForgotPassword({ onNavigate }: ForgotPasswordProps) {
   const [email, setEmail] = useState('');
   const [language, setLanguage] = useState('EN');
   const [isLinkSent, setIsLinkSent] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSendLink = () => {
-    // In real app, this would call the API
-    console.log('Sending reset link to:', email);
-    setIsLinkSent(true);
+  const handleSendLink = async () => {
+    if (!email) {
+      toast.error('Please enter your email');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const result = await authService.forgotPassword({ email });
+
+      if (result.success) {
+        setIsLinkSent(true);
+        toast.success(result.message || 'Reset link sent');
+      } else {
+        toast.error(result.message || 'Failed to send reset link');
+      }
+    } catch (error) {
+      console.error('[ForgotPassword] Error:', error);
+      toast.error('Failed to send reset link. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -58,6 +80,7 @@ export function ForgotPassword({ onNavigate }: ForgotPasswordProps) {
               placeholder="admin@restaurant.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              disabled={isLinkSent || isLoading}
             />
 
             <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
@@ -69,8 +92,13 @@ export function ForgotPassword({ onNavigate }: ForgotPasswordProps) {
 
           {/* Actions */}
           <div className="flex flex-col gap-4">
-            <Button onClick={handleSendLink} className="w-full">
-              Send reset link
+            <Button 
+              onClick={handleSendLink} 
+              className="w-full"
+              disabled={isLinkSent || isLoading || !email}
+            >
+              {isLoading ? 'Sending...' : isLinkSent ? 'Link sent ✓' : 'Send reset link'}
+            </Button>
             </Button>
             
             {/* Show "Go to reset password" link after sending reset link */}

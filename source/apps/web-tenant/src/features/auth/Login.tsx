@@ -119,14 +119,6 @@ export function Login({ onNavigate }: LoginProps) {
 
           {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-            {/* Info Message for Testing */}
-            <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
-              <p className="text-blue-700 text-sm">
-                <strong>Test Account:</strong> You need a registered account to login. 
-                {' '}Use Sign Up to create one, or check your database for existing users.
-              </p>
-            </div>
-
             {/* Server Error Message */}
             {serverError && (
               <div className="p-3 rounded-lg bg-red-50 border border-red-200">
@@ -174,6 +166,7 @@ export function Login({ onNavigate }: LoginProps) {
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
+                  tabIndex={-1}
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
                   className="w-4 h-4 text-emerald-500 border-gray-300 rounded focus:ring-emerald-500"
@@ -186,6 +179,7 @@ export function Login({ onNavigate }: LoginProps) {
                 onClick={() => onNavigate?.(ROUTES.forgotPassword)}
                 className="text-emerald-500 hover:text-emerald-600 transition-colors" 
                 style={{ fontSize: '14px', fontWeight: 500 }}
+                tabIndex={-1}
               >
                 Forgot password?
               </button>
@@ -194,7 +188,7 @@ export function Login({ onNavigate }: LoginProps) {
             {/* Submit Button */}
             <Button 
               type="submit" 
-              className="w-full" 
+              className="w-full focus:ring-black focus:ring-2" 
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Logging in...' : 'Log in'}
@@ -244,6 +238,7 @@ export function Login({ onNavigate }: LoginProps) {
                 onClick={() => onNavigate?.(ROUTES.signup)}
                 className="text-emerald-500 hover:text-emerald-600 transition-colors" 
                 style={{ fontSize: '14px', fontWeight: 500 }}
+                tabIndex={-1}
               >
                 Sign up
               </button>

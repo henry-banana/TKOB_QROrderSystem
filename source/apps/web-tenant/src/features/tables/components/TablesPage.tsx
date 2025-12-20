@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useMemo, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { logger } from '@/lib/logger';
 import './TablesPage.css';
 import { useReactToPrint } from 'react-to-print';
 import QRCode from 'react-qr-code';
@@ -34,6 +36,8 @@ interface Table {
 }
 
 export function TablesPage() {
+  const queryClient = useQueryClient();
+  
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -629,42 +633,75 @@ export function TablesPage() {
   const handleBulkRegenerateQR = async () => {
     setIsBulkRegenLoading(true);
     try {
-      console.log('🔄 [PATCH /api/v1/admin/tables/bulk/status] Request to regenerate all QR codes');
+      const token = localStorage.getItem('authToken');
       
-      // Get all table IDs
-      const tableIds = tables.map(t => t.id);
+      if (!token) {
+        throw new Error('No authentication token found. Please login again.');
+      }
       
-      const response = await fetch('/api/v1/admin/tables/bulk/status', {
-        method: 'PATCH',
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+      const endpoint = `${apiUrl}/api/v1/admin/tables/qr/regenerate-all`;
+      
+      logger.log('🔄 [Bulk Regenerate QR] Starting...');
+      logger.log('📍 Endpoint:', endpoint);
+      logger.log('🔐 Token length:', token.length);
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          tableIds,
-          action: 'regenerate-qr',
-        }),
+      });
+
+      logger.log('📡 Response status:', response.status, response.statusText);
+      logger.log('📡 Response headers:', {
+        'content-type': response.headers.get('content-type'),
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw error;
+        const contentType = response.headers.get('content-type');
+        let errorData: any = {};
+        
+        try {
+          if (contentType?.includes('application/json')) {
+            errorData = await response.json();
+          } else {
+            const text = await response.text();
+            logger.log('📡 Response body (non-JSON):', text.substring(0, 500));
+            errorData = { message: `Server error ${response.status}: ${response.statusText}` };
+          }
+        } catch (parseErr) {
+          logger.error('Failed to parse error response:', parseErr);
+          errorData = { message: `Server error ${response.status}` };
+        }
+        
+        logger.error('❌ API Error Response:', errorData);
+        throw new Error(errorData?.message || `HTTP ${response.status}: ${response.statusText}`);
       }
 
       const result = await response.json();
-      const updatedCount = result.updated || result.regenerated || 0;
-      console.log(`✅ [PATCH /api/v1/admin/tables/bulk/status] Regenerated ${updatedCount} QR codes`);
       
-      setToastMessage(`Bulk QR regeneration completed for ${updatedCount} table(s)`);
+      // Handle both direct response and wrapped response
+      const successCount = result.data?.successCount || result.successCount || result.data?.totalProcessed || result.totalProcessed || 0;
+      
+      setToastMessage(`✅ Bulk QR regeneration completed for ${successCount} table(s)`);
       setToastType('success');
       setShowSuccessToast(true);
       setIsBulkRegenOpen(false);
       
       // Refresh tables list to get updated QR tokens
-      await refetch();
+      await queryClient.invalidateQueries({ queryKey: ['tables', 'list'] });
     } catch (error: any) {
-      console.error('❌ Bulk regenerate error:', error);
-      handleApiError(error, 'Failed to regenerate all QR codes');
+      logger.error('❌ Bulk regenerate error:', {
+        message: error?.message,
+        stack: error?.stack,
+        error,
+      });
+      const errorMessage = error?.message || 'Failed to regenerate all QR codes';
+      setToastMessage(`❌ ${errorMessage}`);
+      setToastType('error');
+      setShowSuccessToast(true);
     } finally {
       setIsBulkRegenLoading(false);
     }
@@ -1324,7 +1361,7 @@ export function TablesPage() {
                     className="text-gray-600 bg-white px-3 py-2 rounded-lg border border-gray-200 break-all"
                     style={{ fontSize: '13px', fontFamily: 'monospace' }}
                   >
-                    https://qrdine.app/t/{selectedTable.id}
+                    https://tkqr.app/t/{selectedTable.id}
                   </p>
                 </div>
               </div>

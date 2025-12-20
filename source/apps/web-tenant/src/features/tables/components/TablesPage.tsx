@@ -33,6 +33,7 @@ interface Table {
   description?: string;
   hasActiveOrders?: boolean;
   qrToken?: string;
+  qrCodeUrl?: string;
 }
 
 export function TablesPage() {
@@ -309,6 +310,7 @@ export function TablesPage() {
       description: t.description || '',
       hasActiveOrders: t.status === 'OCCUPIED',
       qrToken: t.qrToken, // Map qrToken from API response
+      qrCodeUrl: t.qrCodeUrl, // Map qrCodeUrl from API response
     }));
   }, [tablesData]);
 

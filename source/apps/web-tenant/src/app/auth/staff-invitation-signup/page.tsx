@@ -9,7 +9,7 @@ import { QrCode, Shield, CheckCircle } from 'lucide-react';
 export default function StaffInvitationSignupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const email = searchParams.get('email') || 'mike@bistro.com';
+  const email = searchParams.get('email') || 'mike@tkob.com';
   const token = searchParams.get('token') || '';
   const role = searchParams.get('role') || 'Kitchen Staff';
 

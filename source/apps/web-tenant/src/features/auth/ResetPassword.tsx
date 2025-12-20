@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button, Input, Card } from '@/shared/components/ui';
 import { QrCode, AlertTriangle, CheckCircle } from 'lucide-react';
 import { ROUTES } from '@/lib/routes';
+import { authService } from './services';
+import { toast } from 'sonner';
+import { useSearchParams } from 'next/navigation';
 import "../../styles/globals.css";
 
 interface ResetPasswordProps {
@@ -14,6 +17,9 @@ export function ResetPassword({ onNavigate }: ResetPasswordProps) {
   const [language, setLanguage] = useState('EN');
   const [linkState, setLinkState] = useState<'valid' | 'invalid'>('valid'); // Simulate link validation
   const [passwordStrength, setPasswordStrength] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token') || '';
 
   const handlePasswordChange = (value: string) => {
     setPassword(value);
@@ -40,8 +46,43 @@ export function ResetPassword({ onNavigate }: ResetPasswordProps) {
     return 'Strong';
   };
 
-  const handleResetPassword = () => {
-    onNavigate?.(ROUTES.login);
+  const handleResetPassword = async () => {
+    if (password !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    if (passwordStrength < 2) {
+      toast.error('Password is too weak');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const result = await authService.resetPassword({
+        token,
+        newPassword: password,
+        confirmPassword,
+      });
+
+      if (result.success) {
+        toast.success(result.message || 'Password reset successful');
+        setTimeout(() => {
+          onNavigate?.(ROUTES.login);
+        }, 1500);
+      } else {
+        if (result.message?.includes('expired') || result.message?.includes('invalid')) {
+          setLinkState('invalid');
+        }
+        toast.error(result.message || 'Password reset failed');
+      }
+    } catch (error) {
+      console.error('[ResetPassword] Error:', error);
+      toast.error('Password reset failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Invalid/Expired link state
@@ -204,9 +245,9 @@ export function ResetPassword({ onNavigate }: ResetPasswordProps) {
             <Button 
               onClick={handleResetPassword} 
               className="w-full"
-              disabled={!password || !confirmPassword || password !== confirmPassword}
+              disabled={!password || !confirmPassword || password !== confirmPassword || isLoading}
             >
-              Reset password
+              {isLoading ? 'Resetting...' : 'Reset password'}
             </Button>
             
             <div className="text-center">

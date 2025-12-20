@@ -35,7 +35,7 @@ export function TenantProfilePage() {
   const [address, setAddress] = useState('123 Main Street, Downtown');
   const [phone, setPhone] = useState('+84 90 123 4567');
   const [email, setEmail] = useState('contact@tkqr.com');
-  const [description, setDescription] = useState('Modern bistro serving fresh, locally-sourced dishes.');
+  const [description, setDescription] = useState('Modern tkob serving fresh, locally-sourced dishes.');
   const [defaultLanguage, setDefaultLanguage] = useState('en');
   const [theme, setTheme] = useState('emerald');
   const [timezone, setTimezone] = useState('UTC+7 (Bangkok, Hanoi)');

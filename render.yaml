@@ -1,0 +1,63 @@
+services:
+  # Backend API Service
+  - type: web
+    name: tkob-api
+    runtime: docker
+    region: singapore # Chọn: oregon, frankfurt, singapore
+    plan: starter # starter (free), standard, pro
+    branch: main # hoặc branch khác bạn muốn deploy
+    rootDir: source/apps/api
+    dockerfilePath: ./Dockerfile
+    dockerContext: ../../..
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_PORT
+        value: 3000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: tkob-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true # Auto-generate secure random string
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: REDIS_HOST
+        fromService:
+          name: tkob-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: tkob-redis
+          type: redis
+          property: port
+      - key: CUSTOMER_APP_URL
+        value: https://your-customer-app.vercel.app # Thay bằng URL Vercel của bạn
+      - key: CORS_ORIGINS
+        value: https://your-customer-app.vercel.app,https://your-admin-app.vercel.app
+      - key: LOG_LEVEL
+        value: info
+    buildFilter:
+      paths:
+        - source/apps/api/**
+    healthCheckPath: /health
+    autoDeploy: true
+
+  # Redis Cache Service
+  - type: redis
+    name: tkob-redis
+    region: singapore # Nên cùng region với API
+    plan: starter # starter (free 25MB), standard (250MB)
+    maxmemoryPolicy: allkeys-lru # Tự động xóa key cũ khi hết RAM
+    ipAllowList: [] # Bỏ trống để cho phép mọi IP (hoặc chỉ định IP cụ thể)
+
+databases:
+  # PostgreSQL Database (nếu dùng Render thay vì Neon)
+  # Nếu dùng Neon thì bỏ phần này và chỉ cần thêm DATABASE_URL từ Neon vào envVars
+  - name: tkob-db
+    region: singapore
+    plan: starter # starter (free), standard
+    databaseName: qr_ordering_prod
+    user: qr_ordering_user
+    ipAllowList: [] # Bỏ trống để cho phép mọi IP

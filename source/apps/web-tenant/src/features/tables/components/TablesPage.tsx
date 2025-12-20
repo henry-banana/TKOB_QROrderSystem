@@ -5,10 +5,9 @@ import './TablesPage.css';
 import { useReactToPrint } from 'react-to-print';
 import QRCode from 'react-qr-code';
 import { saveAs } from 'file-saver';
-import { Card } from '@/shared/components/ui/Card';
-import { Badge } from '@/shared/components/ui/Badge';
-import { Toast } from '@/shared/components/ui/Toast';
-import { Modal } from '@/shared/components/ui/Modal';
+import { Card, Badge, Toast, Modal } from '@/shared/components/ui';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@packages/ui';
+import { Table as ShadcnTable, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@packages/ui';
 import { TableFormFields } from './TableFormFields';
 import { Plus, X, QrCode, Users, Download, Printer, Edit, RefreshCcw } from 'lucide-react';
 import {
@@ -53,6 +52,8 @@ export function TablesPage() {
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const [isFetchingTableDetails, setIsFetchingTableDetails] = useState(false);
   const [isPrintingQR, setIsPrintingQR] = useState(false);
+  const [isBulkRegenOpen, setIsBulkRegenOpen] = useState(false);
+  const [isBulkRegenLoading, setIsBulkRegenLoading] = useState(false);
   
   // QR Code printing ref
   const qrPrintRef = useRef<HTMLDivElement>(null);
@@ -625,6 +626,50 @@ export function TablesPage() {
     }
   };
 
+  const handleBulkRegenerateQR = async () => {
+    setIsBulkRegenLoading(true);
+    try {
+      console.log('🔄 [PATCH /api/v1/admin/tables/bulk/status] Request to regenerate all QR codes');
+      
+      // Get all table IDs
+      const tableIds = tables.map(t => t.id);
+      
+      const response = await fetch('/api/v1/admin/tables/bulk/status', {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tableIds,
+          action: 'regenerate-qr',
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw error;
+      }
+
+      const result = await response.json();
+      const updatedCount = result.updated || result.regenerated || 0;
+      console.log(`✅ [PATCH /api/v1/admin/tables/bulk/status] Regenerated ${updatedCount} QR codes`);
+      
+      setToastMessage(`Bulk QR regeneration completed for ${updatedCount} table(s)`);
+      setToastType('success');
+      setShowSuccessToast(true);
+      setIsBulkRegenOpen(false);
+      
+      // Refresh tables list to get updated QR tokens
+      await refetch();
+    } catch (error: any) {
+      console.error('❌ Bulk regenerate error:', error);
+      handleApiError(error, 'Failed to regenerate all QR codes');
+    } finally {
+      setIsBulkRegenLoading(false);
+    }
+  };
+
   const handleActivateTable = async () => {
     if (!selectedTable) return;
     
@@ -798,30 +843,56 @@ export function TablesPage() {
             </div>
             <div className="flex flex-col md:flex-row md:items-center gap-3 w-full md:w-auto">
               {tables.length > 0 && (
-                <button
-                  onClick={handleDownloadAll}
-                  disabled={isDownloadingAll}
-                  className="flex items-center justify-center md:justify-start gap-2 px-4 sm:px-5 py-3 bg-white hover:bg-gray-50 border-2 border-gray-300 hover:border-emerald-500 text-gray-700 hover:text-emerald-700 transition-all flex-1 md:flex-none disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ 
-                    fontSize: 'clamp(13px, 4vw, 15px)', 
-                    fontWeight: 600, 
-                    height: '48px',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                  }}
-                >
-                  {isDownloadingAll ? (
-                    <>
-                      <RefreshCcw className="w-4 sm:w-5 h-4 sm:h-5 animate-spin" />
-                      Downloading...
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 sm:w-5 h-4 sm:h-5" />
-                      <span className="hidden sm:inline">Download All QR Codes</span>
-                      <span className="sm:hidden">Download</span>
-                    </>
-                  )}
-                </button>
+                <>
+                  <button
+                    onClick={() => setIsBulkRegenOpen(true)}
+                    disabled={isBulkRegenLoading}
+                    className="flex items-center justify-center md:justify-start gap-2 px-4 sm:px-5 py-3 bg-white hover:bg-gray-50 border-2 border-gray-300 hover:border-blue-500 text-gray-700 hover:text-blue-700 transition-all flex-1 md:flex-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ 
+                      fontSize: 'clamp(13px, 4vw, 15px)', 
+                      fontWeight: 600, 
+                      height: '48px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                    }}
+                  >
+                    {isBulkRegenLoading ? (
+                      <>
+                        <RefreshCcw className="w-4 sm:w-5 h-4 sm:h-5 animate-spin" />
+                        Regenerating...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCcw className="w-4 sm:w-5 h-4 sm:h-5" />
+                        <span className="hidden sm:inline">Regenerate All QR Codes</span>
+                        <span className="sm:hidden">Regenerate</span>
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleDownloadAll}
+                    disabled={isDownloadingAll}
+                    className="flex items-center justify-center md:justify-start gap-2 px-4 sm:px-5 py-3 bg-white hover:bg-gray-50 border-2 border-gray-300 hover:border-emerald-500 text-gray-700 hover:text-emerald-700 transition-all flex-1 md:flex-none disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ 
+                      fontSize: 'clamp(13px, 4vw, 15px)', 
+                      fontWeight: 600, 
+                      height: '48px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                    }}
+                  >
+                    {isDownloadingAll ? (
+                      <>
+                        <RefreshCcw className="w-4 sm:w-5 h-4 sm:h-5 animate-spin" />
+                        Downloading...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 sm:w-5 h-4 sm:h-5" />
+                        <span className="hidden sm:inline">Download All QR Codes</span>
+                        <span className="sm:hidden">Download</span>
+                      </>
+                    )}
+                  </button>
+                </>
               )}
               <button
                 onClick={handleOpenAddModal}
@@ -1470,6 +1541,55 @@ export function TablesPage() {
               This will restore the table to <strong>Available</strong> status and allow customers to place new orders.
             </p>
           )}
+        </Modal>
+      )}
+
+      {isBulkRegenOpen && (
+        <Modal
+          isOpen={isBulkRegenOpen}
+          title="Regenerate all QR codes?"
+          onClose={() => setIsBulkRegenOpen(false)}
+          size="md"
+          footer={
+            <>
+              <button
+                onClick={() => setIsBulkRegenOpen(false)}
+                className="flex-1 px-4 text-gray-700 transition-colors border border-gray-300 hover:bg-gray-50"
+                style={{ fontSize: '15px', fontWeight: 600, borderRadius: '4px', height: '48px' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkRegenerateQR}
+                disabled={isBulkRegenLoading}
+                className={`flex-1 px-4 text-white transition-colors flex items-center justify-center gap-2 ${
+                  isBulkRegenLoading ? 'bg-red-400 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600'
+                }`}
+                style={{ fontSize: '15px', fontWeight: 600, borderRadius: '4px', height: '48px' }}
+              >
+                {isBulkRegenLoading && <RefreshCcw className="w-4 h-4 animate-spin" />}
+                <span>{isBulkRegenLoading ? 'Regenerating...' : 'Regenerate'}</span>
+              </button>
+            </>
+          }
+        >
+          <div className="space-y-4">
+            <p className="text-gray-900" style={{ fontSize: '15px', fontWeight: 500, lineHeight: '1.5' }}>
+              This will regenerate QR codes for all <strong>{tables.length} tables</strong>.
+            </p>
+
+            <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-red-900" style={{ fontSize: '14px', lineHeight: '1.6', fontWeight: 500 }}>
+                <strong>⚠️ Warning:</strong> All existing QR codes will stop working immediately. Customers using old QR codes will not be able to access the menu.
+              </p>
+            </div>
+
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <p className="text-amber-900" style={{ fontSize: '14px', lineHeight: '1.6', fontWeight: 500 }}>
+                <strong>Note:</strong> This action cannot be undone. Make sure all staff are notified before proceeding.
+              </p>
+            </div>
+          </div>
         </Modal>
       )}
 

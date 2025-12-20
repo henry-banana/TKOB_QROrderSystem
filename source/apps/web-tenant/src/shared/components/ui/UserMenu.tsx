@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, User, LogOut, Code } from 'lucide-react';
 import { useAuth } from '@/shared/context/AuthContext';

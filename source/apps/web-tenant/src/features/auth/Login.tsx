@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/shared/components/ui/Button';
-import { Input } from '@/shared/components/ui/Input';
-import { Card } from '@/shared/components/ui/Card';
+import { Button, Input, Card } from '@/shared/components/ui';
 import { QrCode } from 'lucide-react';
 import { useAuth } from '@/shared/context/AuthContext';
 import { ROUTES } from '@/lib/routes';

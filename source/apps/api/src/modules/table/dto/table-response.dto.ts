@@ -70,3 +70,36 @@ export class RegenerateQrResponseDto {
   })
   generatedAt: Date;
 }
+
+export class BulkRegenerateQrResponseDto {
+  @ApiProperty({ 
+    example: 15,
+    description: 'Total number of tables processed' 
+  })
+  totalProcessed: number;
+
+  @ApiProperty({ 
+    example: 15,
+    description: 'Number of QR codes successfully regenerated' 
+  })
+  successCount: number;
+
+  @ApiProperty({ 
+    example: 0,
+    description: 'Number of failures' 
+  })
+  failureCount: number;
+
+  @ApiProperty({ 
+    example: ['Table 1', 'Table 2', 'VIP-A'],
+    description: 'List of affected table numbers',
+    type: [String]
+  })
+  affectedTables: string[];
+
+  @ApiProperty({ 
+    example: '2024-01-15T10:30:00.000Z',
+    description: 'Bulk operation timestamp' 
+  })
+  regeneratedAt: Date;
+}

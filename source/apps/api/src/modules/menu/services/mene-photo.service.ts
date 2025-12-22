@@ -1,0 +1,174 @@
+import { PrismaService } from '@/database/prisma.service';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import * as path from 'path';
+import * as fs from 'fs/promises';
+import * as crypto from 'crypto';
+import { MenuItemPhotoResponseDto } from '../dto/menu-photo.dto';
+
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+@Injectable()
+export class MenuPhotoService {
+  private uploadDir: string;
+  private readonly logger = new Logger(MenuPhotoService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
+  ) {
+    // In production, use S3/Cloudinary. For now, local storage
+    this.uploadDir = path.join(process.cwd(), 'uploads', 'menu-photos');
+    void this.ensureUploadDir();
+  }
+
+  private async ensureUploadDir() {
+    try {
+      await fs.mkdir(this.uploadDir, { recursive: true });
+    } catch (error) {
+      this.logger.error(`Failed to create upload directory: ${error}`);
+    }
+  }
+
+  async uploadPhoto(
+    menuItemId: string,
+    file: Express.Multer.File,
+  ): Promise<MenuItemPhotoResponseDto> {
+    // 1. Validate file
+    this.validateFile(file);
+
+    // 2. Verify menu item exists
+    const item = await this.prisma.menuItem.findUnique({
+      where: {
+        id: menuItemId,
+      },
+    });
+
+    if (!item) {
+      throw new NotFoundException('Menu item not found');
+    }
+
+    // 3. Generate safe filename
+    const ext = path.extname(file.originalname);
+    const randomName = crypto.randomBytes(16).toString('hex');
+    const filename = `${randomName}${ext}`;
+    const filePath = path.join(this.uploadDir, filename);
+
+    // 4. Savefile
+    await fs.writeFile(filePath, file.buffer);
+
+    // 5. Get image dimensions (optional, requires sharp package)
+    // const metadata = await sharp(file.buffer).metadata();
+
+    // 6. Create photo record
+    const photo = await this.prisma.menuItemPhoto.create({
+      data: {
+        menuItemId,
+        url: `/uploads/menu-photos/${filename}`, // In prod: S3 URL
+        filename: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        displayOrder: await this.getNextDisplayOrder(menuItemId),
+        isPrimary: false,
+      },
+    });
+
+    // 7. If this is the first photo, set as primary
+    const photoCount = await this.prisma.menuItemPhoto.count({
+      where: {
+        menuItemId,
+      },
+    });
+
+    if (photoCount == 1) {
+      await this.setPrimaryPhoto(menuItemId, photo.id);
+    }
+
+    return this.toResponseDto(photo);
+  }
+
+  toResponseDto(photo: {
+    id: string;
+    displayOrder: number;
+    createdAt: Date;
+    updatedAt: Date;
+    url: string;
+    filename: string;
+    mimeType: string;
+    size: number;
+    width: number | null;
+    height: number | null;
+    isPrimary: boolean;
+    menuItemId: string;
+  }): MenuItemPhotoResponseDto {
+    return {
+      id: photo.id,
+      url: photo.url,
+      filename: photo.filename,
+      mimeType: photo.mimeType,
+      size: photo.size,
+      displayOrder: photo.displayOrder,
+      isPrimary: photo.isPrimary,
+      createdAt: photo.createdAt,
+    };
+  }
+
+  async setPrimaryPhoto(menuItemId: string, photoId: string): Promise<void> {
+    const photo = await this.prisma.menuItemPhoto.findFirst({
+      where: {
+        id: photoId,
+        menuItemId: menuItemId,
+      },
+    });
+
+    if (!photo) {
+      throw new NotFoundException('Photo not found');
+    }
+
+    // Unset all other primary photo
+    await this.prisma.menuItemPhoto.updateMany({
+      where: { menuItemId },
+      data: {
+        isPrimary: false,
+      },
+    });
+
+    // Set this photo as primary
+    await this.prisma.menuItemPhoto.update({
+      where: { id: photoId },
+      data: { isPrimary: true },
+    });
+
+    /// Update menu item's primaryPhotoId
+    await this.prisma.menuItem.update({
+      where: { id: menuItemId },
+      data: {
+        imageUrl: photo.url,
+        primaryPhotoId: photoId,
+      },
+    });
+  }
+
+  private async getNextDisplayOrder(menuItemId: string): Promise<number> {
+    const maxOrder = await this.prisma.menuItemPhoto.findFirst({
+      where: { menuItemId },
+      orderBy: { displayOrder: 'desc' },
+      select: { displayOrder: true },
+    });
+
+    return (maxOrder?.displayOrder ?? -1) + 1;
+  }
+
+  private validateFile(file: Express.Multer.File): void {
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      throw new BadRequestException(`Invalid file type. Allowed: ${ALLOWED_MIME_TYPES.join(', ')}`);
+    }
+
+    if (file.size > MAX_FILE_SIZE) {
+      throw new BadRequestException(
+        `File too large. Maximum size: ${MAX_FILE_SIZE / 1024 / 1024}MB`,
+      );
+    }
+  }
+}

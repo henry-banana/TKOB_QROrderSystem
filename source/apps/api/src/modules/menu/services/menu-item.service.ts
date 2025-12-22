@@ -43,7 +43,10 @@ export class MenuItemsService {
     // Verify modifier groups exist (if provided)
     if (dto.modifierGroupIds && dto.modifierGroupIds.length > 0) {
       for (const groupId of dto.modifierGroupIds) {
-        await this.modifierGroupRepo.findById(groupId);
+        const modifierGroup = await this.modifierGroupRepo.findById(groupId);
+        if (!modifierGroup) {
+          throw new NotFoundException(`Modifier group with ID ${groupId} not found`);
+        }
       }
     }
 

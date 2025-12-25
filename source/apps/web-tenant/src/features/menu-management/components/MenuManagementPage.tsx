@@ -6,6 +6,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { MenuTabs } from './MenuTabs';
+import { useAppRouter } from '@/shared/hooks/useAppRouter';
+import { ROUTES } from '@/lib/routes';
 import { 
   Plus, 
   Edit, 
@@ -89,6 +91,9 @@ type CategoryFormData = {
 
 // Full featured Menu Management matching Admin-screens-v3 design
 export function MenuManagementPage() {
+  // React Router
+  const { goTo } = useAppRouter();
+  
   // React Query
   const queryClient = useQueryClient();
 
@@ -247,6 +252,7 @@ export function MenuManagementPage() {
     category: selectedCategory,
     description: '',
     price: '',
+    prepTimeMinutes: null as number | null,
     status: 'available' as 'available' | 'unavailable' | 'sold_out',
     menuItemPhotos: [] as PhotoItem[],
     dietary: [] as string[],
@@ -471,6 +477,7 @@ export function MenuManagementPage() {
       category: defaultCategory,
       description: '',
       price: '',
+      prepTimeMinutes: null,
       status: 'available',
       menuItemPhotos: [],
       dietary: [],
@@ -489,6 +496,7 @@ export function MenuManagementPage() {
       category: item.categoryId || selectedCategory,
       description: item.description || '',
       price: String(item.price || ''),
+      prepTimeMinutes: item.preparationTime || null,
       status: item.status === 'SOLD_OUT' ? 'sold_out' : (!item.isAvailable ? 'unavailable' : 'available'),
       menuItemPhotos: [],
       dietary: item.dietary || [],
@@ -506,6 +514,7 @@ export function MenuManagementPage() {
       category: selectedCategory,
       description: '',
       price: '',
+      prepTimeMinutes: null,
       status: 'available',
       menuItemPhotos: [],
       dietary: [],
@@ -524,6 +533,7 @@ export function MenuManagementPage() {
       category: selectedCategory,
       description: '',
       price: '',
+      prepTimeMinutes: null,
       status: 'available',
       menuItemPhotos: [],
       dietary: [],
@@ -543,6 +553,7 @@ export function MenuManagementPage() {
             categoryId: itemFormData.category,
             description: itemFormData.description || undefined,
             price: parseFloat(itemFormData.price),
+            preparationTime: itemFormData.prepTimeMinutes ?? undefined,
             modifierGroupIds: itemFormData.modifierGroupIds, // Include modifier groups
             // Note: CreateMenuItemDto không có available field
             // Backend sẽ tự set available = true và status = DRAFT by default
@@ -570,6 +581,7 @@ export function MenuManagementPage() {
             categoryId: itemFormData.category,
             description: itemFormData.description || undefined,
             price: parseFloat(itemFormData.price),
+            preparationTime: itemFormData.prepTimeMinutes ?? undefined,
             available: itemFormData.status === 'available',  // 'available' not 'isAvailable'
             modifierGroupIds: itemFormData.modifierGroupIds, // Include modifier groups
           }
@@ -1138,6 +1150,33 @@ export function MenuManagementPage() {
                 </div>
 
                 <div className="flex flex-col gap-2">
+                  <label className="text-sm font-semibold text-gray-900">Preparation time (minutes) <span className="text-gray-500 font-normal">(optional)</span></label>
+                  <input
+                    type="number"
+                    value={itemFormData.prepTimeMinutes ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '') {
+                        setItemFormData({ ...itemFormData, prepTimeMinutes: null });
+                      } else {
+                        const numValue = parseInt(value, 10);
+                        if (!isNaN(numValue) && numValue >= 0 && numValue <= 240) {
+                          setItemFormData({ ...itemFormData, prepTimeMinutes: numValue });
+                        }
+                      }
+                    }}
+                    placeholder="e.g., 15"
+                    min="0"
+                    max="240"
+                    step="1"
+                    className="px-4 py-3 border border-gray-300 rounded-xl text-sm focus:outline-none focus:border-emerald-500"
+                  />
+                  {itemFormData.prepTimeMinutes !== null && itemFormData.prepTimeMinutes > 240 && (
+                    <p className="text-xs text-red-600">Preparation time must not exceed 240 minutes</p>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-2">
                   <label className="text-sm font-semibold text-gray-900">Status *</label>
                   <select
                     value={itemFormData.status}
@@ -1392,7 +1431,7 @@ export function MenuManagementPage() {
               activeTab="menu-items"
               onTabChange={(tab) => {
                 if (tab === 'modifier-groups') {
-                  // Navigate to modifier groups page
+                  goTo(ROUTES.menuModifiers);
                 }
               }}
             />
@@ -1434,7 +1473,7 @@ export function MenuManagementPage() {
                 {/* All Items */}
                 <button
                   onClick={() => setSelectedCategory('all')}
-                  className={`flex items-center justify-between pl-3 pr-7 py-2.5 transition-all ${
+                  className={`flex items-center justify-between pl-3 pr-8 py-2.5 transition-all ${
                     selectedCategory === 'all'
                       ? 'bg-emerald-50 text-emerald-700'
                       : 'text-gray-700 hover:bg-gray-50'
@@ -1498,9 +1537,9 @@ export function MenuManagementPage() {
                       title={category.name}
                     >
                       {/* Row 1: Category name and count + More button (no nesting) */}
-                      <div className="flex items-center justify-between gap-1 min-w-0">
+                      <div className="flex items-center justify-between min-w-0">
                         {/* Category info - non-interactive, inherits text color from parent */}
-                        <div className="flex items-center w-full min-w-0 gap-2 text-left px-2 py-1.5 rounded-lg">
+                        <div className="flex items-center w-full min-w-0 gap-2 text-left pl-2 pr-0.5 py-1.5 rounded-lg">
                           <div className="flex items-center gap-2 min-w-0 flex-1">
                             <span className="text-gray-400 shrink-0" style={{ fontSize: '11px', fontWeight: 500 }}>
                               {displayOrder !== null ? `#${displayOrder}` : '—'}

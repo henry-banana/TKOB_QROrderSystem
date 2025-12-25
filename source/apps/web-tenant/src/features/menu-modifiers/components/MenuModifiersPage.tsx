@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card, Badge, Toast } from '@/shared/components/ui';
 import { MenuTabs } from '@/features/menu-management/components/MenuTabs';
+import { useAppRouter } from '@/shared/hooks/useAppRouter';
+import { ROUTES } from '@/lib/routes';
 import { Search, Plus, Edit, Trash2, Filter, XCircle, X, AlertTriangle } from 'lucide-react';
 
 // Import generated API hooks
@@ -28,6 +30,9 @@ interface ModifierGroup {
 }
 
 export function MenuModifiersPage() {
+  // React Router
+  const { goTo } = useAppRouter();
+  
   // React Query
   const queryClient = useQueryClient();
 
@@ -349,18 +354,26 @@ export function MenuModifiersPage() {
     <>
       {/* Main container */}
       <div className="flex flex-col bg-gray-50 h-full overflow-hidden">
-        {/* Header - sticky */}
-        <div className="shrink-0 px-6 pt-3 pb-2 bg-white sticky top-0 z-10 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 style={{ fontSize: '26px', lineHeight: '32px', fontWeight: 600, color: '#1F2937', marginBottom: '4px' }}>
+        {/* Page Header */}
+        <div className="px-6 pt-3 pb-2 border-b border-gray-200 bg-white">
+          <div className="flex items-start justify-between">
+            <div className="flex flex-col gap-1">
+              <h2 className="text-gray-900" style={{ fontSize: '26px', fontWeight: 700, lineHeight: '1.2', letterSpacing: '-0.02em' }}>
                 Modifier Groups
               </h2>
-              <p style={{ fontSize: '14px', lineHeight: '20px', color: '#6B7280' }}>
+              <p className="text-gray-600" style={{ fontSize: '14px' }}>
                 Manage sizes, toppings, and other options for menu items
               </p>
             </div>
-            <MenuTabs />
+            
+            <MenuTabs 
+              activeTab="modifier-groups"
+              onTabChange={(tab) => {
+                if (tab === 'menu-items') {
+                  goTo(ROUTES.menu);
+                }
+              }}
+            />
           </div>
         </div>
 
@@ -370,7 +383,7 @@ export function MenuModifiersPage() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               {/* Title with count text */}
-              <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#111827' }}>
+              <h3 className="text-gray-900" style={{ fontSize: '18px', fontWeight: 700 }}>
                 All Groups
               </h3>
               <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full" style={{ fontSize: '13px', fontWeight: 600 }}>
@@ -384,7 +397,7 @@ export function MenuModifiersPage() {
                     setSelectedType('all');
                     setSearchQuery('');
                   }}
-                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
                 >
                   <XCircle className="w-4 h-4" />
                   Clear filter
@@ -392,18 +405,14 @@ export function MenuModifiersPage() {
               )}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               {/* Filter button */}
               <div className="relative">
                 <button
                   onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
                 >
-                  <Filter className="w-4 h-4" />
                   Filter
-                  {selectedType !== 'all' && (
-                    <Badge variant="primary">{selectedType === 'single' ? 'Single' : 'Multi'}</Badge>
-                  )}
                 </button>
 
                 {/* Filter dropdown */}
@@ -501,13 +510,13 @@ export function MenuModifiersPage() {
                       <div className="mt-3 pt-3 border-t border-gray-100 flex gap-2">
                         <button
                           onClick={handleResetFilters}
-                          className="flex-1 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                          className="flex-1 px-3 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
                         >
                           Reset
                         </button>
                         <button
                           onClick={handleApplyFilters}
-                          className="flex-1 px-3 py-2 text-sm text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
+                          className="flex-1 px-3 py-2 text-sm font-semibold text-white bg-emerald-500 rounded-xl hover:bg-emerald-600 transition-colors"
                         >
                           Apply
                         </button>
@@ -520,7 +529,7 @@ export function MenuModifiersPage() {
               {/* New Group button */}
               <button
                 onClick={handleNewGroup}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-3 text-sm font-semibold text-white bg-emerald-500 rounded-xl hover:bg-emerald-600 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 New Group
@@ -602,7 +611,7 @@ export function MenuModifiersPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEditGroup(group)}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-lg transition-all border border-emerald-200 hover:border-emerald-300"
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 rounded-xl transition-all border border-emerald-200 hover:border-emerald-300"
                       style={{ fontSize: '13px', fontWeight: 600 }}
                     >
                       <Edit className="w-4 h-4" />
@@ -610,7 +619,7 @@ export function MenuModifiersPage() {
                     </button>
                     <button
                       onClick={() => handleDeleteGroup(group)}
-                      className="flex items-center justify-center w-10 h-10 bg-gray-100 hover:bg-red-50 rounded-lg transition-all border border-gray-200 hover:border-red-300"
+                      className="flex items-center justify-center w-10 h-10 bg-gray-100 hover:bg-red-50 rounded-xl transition-all border border-gray-200 hover:border-red-300"
                     >
                       <Trash2 className="w-4 h-4 text-gray-600 hover:text-red-600" />
                     </button>
@@ -632,7 +641,7 @@ export function MenuModifiersPage() {
               {!searchQuery && selectedType === 'all' && (
                 <button
                   onClick={handleNewGroup}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
+                  className="flex items-center gap-2 px-4 py-3 text-sm font-semibold text-white bg-emerald-500 rounded-xl hover:bg-emerald-600 transition-colors"
                 >
                   <Plus className="w-4 h-4" />
                   New Group

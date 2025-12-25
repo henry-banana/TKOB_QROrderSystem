@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Edit2, Eye, Trash2 } from '../icons';
+import { Edit2, Eye, Trash2 } from './icons';
 
 type CategoryContextMenuProps = {
   contextMenu: { categoryId: string; anchor: 'cursor' | 'button'; x: number; y: number } | null;

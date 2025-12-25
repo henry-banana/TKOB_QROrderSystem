@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import Image from 'next/image';
 import { Card, Badge, Toast } from '@/shared/components/ui';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -74,6 +75,14 @@ const MAX_FILE_SIZE_MB = 5;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const ALLOWED_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp']);
+
+// Helper to convert relative image URLs to absolute
+const getImageUrl = (imageUrl: string | null | undefined): string | null => {
+  if (!imageUrl) return null;
+  if (imageUrl.startsWith('http')) return imageUrl; // Already absolute
+  // Convert relative path to absolute URL pointing to API
+  return `http://localhost:3000${imageUrl}`;
+};
 
 type PhotoItem = {
   id: string;
@@ -335,6 +344,12 @@ export function MenuManagementPage() {
       }
       if (sortOption === 'Sort by: Price (High)') {
         return (b.price || 0) - (a.price || 0);
+      }
+      if (sortOption === 'Sort by: Name (A-Z)') {
+        return (a.name || '').localeCompare((b.name || ''), 'en', { numeric: true });
+      }
+      if (sortOption === 'Sort by: Name (Z-A)') {
+        return (b.name || '').localeCompare((a.name || ''), 'en', { numeric: true });
       }
       // Default: Newest (by createdAt)
       return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
@@ -1668,6 +1683,8 @@ export function MenuManagementPage() {
                       <option>Sort by: Popularity</option>
                       <option>Sort by: Price (Low)</option>
                       <option>Sort by: Price (High)</option>
+                      <option>Sort by: Name (A-Z)</option>
+                      <option>Sort by: Name (Z-A)</option>
                     </select>
                     <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                   </div>
@@ -1713,8 +1730,19 @@ export function MenuManagementPage() {
                       {visibleMenuItems.map((item: any) => (
                         <Card key={item.id} className="p-0 overflow-hidden hover:shadow-lg transition-all">
                           {/* Image */}
-                          <div className="w-full aspect-video bg-linear-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                            <ImageIcon className="w-12 h-12 text-gray-400" />
+                          <div className="w-full aspect-video bg-linear-to-br from-gray-100 to-gray-200 flex items-center justify-center overflow-hidden relative">
+                            {item.imageUrl ? (
+                              <Image 
+                                src={getImageUrl(item.imageUrl) || ''}
+                                alt={item.name}
+                                fill
+                                unoptimized
+                                className="object-cover"
+                                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                              />
+                            ) : (
+                              <ImageIcon className="w-12 h-12 text-gray-400" />
+                            )}
                           </div>
 
                           {/* Content */}
@@ -1723,13 +1751,9 @@ export function MenuManagementPage() {
                               <h4 className="text-lg font-semibold text-gray-900 mb-2">{item.name}</h4>
                               <div className="flex flex-wrap gap-2">
                                 <Badge variant={
-                                  item.status === 'available' ? 'success' : 
-                                  item.status === 'sold_out' ? 'error' : 
-                                  'neutral'
+                                  item.available ? 'success' : 'neutral'
                                 }>
-                                  {item.status === 'available' ? 'Available' : 
-                                   item.status === 'sold_out' ? 'Sold out' : 
-                                   'Unavailable'}
+                                  {item.available ? 'Available' : 'Unavailable'}
                                 </Badge>
                                 {item.chefRecommended && (
                                   <div className="flex items-center gap-1 px-2 py-1 border border-emerald-500 text-emerald-700 rounded-full text-xs font-medium">

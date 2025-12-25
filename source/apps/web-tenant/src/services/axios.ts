@@ -2,10 +2,12 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from 'axios';
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
 
 // Log API URL on initialization for debugging
 if (typeof window !== 'undefined') {
   console.log('🔧 [axios] API Base URL:', baseURL);
+  console.log('🔧 [axios] Mock Mode:', useMockData ? 'ENABLED ✅' : 'DISABLED (Real API)');
 }
 
 export const api = axios.create({
@@ -37,6 +39,18 @@ const processQueue = (error: any, token: string | null = null) => {
 };
 
 api.interceptors.request.use((config) => {
+  // Skip real API calls when mock mode is enabled
+  if (useMockData) {
+    console.log('🎭 [axios] Mock Mode - Skipping real API call:', config.method?.toUpperCase(), config.url);
+    // Return a rejected promise that will be caught by React Query
+    // React Query will then use the mock data from query functions
+    return Promise.reject({
+      config,
+      isMockMode: true,
+      message: 'Mock mode enabled - using mock data instead of real API'
+    });
+  }
+
   try {
     // Check both localStorage (Remember me) and sessionStorage (session-only)
     const token = typeof window !== 'undefined' 
@@ -162,7 +176,7 @@ api.interceptors.response.use(
 );
 
 // Orval custom mutator function
-export const customInstance = <T>(config: any): Promise<T> => {
+export const customInstance = async <T>(config: any): Promise<T> => {
   const startTime = Date.now();
   console.log('🌐 [customInstance] Request:', {
     method: config.method,
@@ -172,6 +186,31 @@ export const customInstance = <T>(config: any): Promise<T> => {
     params: config.params,
     hasData: !!config.data,
   });
+  
+  // Check if mock mode and if we have mock data for this request
+  if (useMockData) {
+    const { getMockResponseForURL } = await import('./mocks/menu-service');
+    const mockResponse = await getMockResponseForURL(
+      config.method?.toUpperCase() || 'GET',
+      config.url,
+      config.data
+    );
+    
+    if (mockResponse) {
+      const duration = Date.now() - startTime;
+      console.log('🎭 [customInstance] Mock Response:', {
+        method: config.method,
+        url: config.url,
+        duration: `${duration}ms`,
+      });
+      
+      // Return mock data in the same format as real API
+      if (mockResponse.data && typeof mockResponse.data === 'object' && 'data' in mockResponse.data) {
+        return mockResponse.data.data as T;
+      }
+      return mockResponse.data as T;
+    }
+  }
   
   return api(config).then(({ data }) => {
     const duration = Date.now() - startTime;
@@ -195,6 +234,12 @@ export const customInstance = <T>(config: any): Promise<T> => {
     return data;
   }).catch((error) => {
     const duration = Date.now() - startTime;
+    
+    // Skip all error logging when in mock mode
+    if (error.isMockMode) {
+      throw error; // Silently reject for mock mode
+    }
+    
     const errorData = error.response?.data || {};
     
     // Skip logging for canceled requests (React Strict Mode behavior)

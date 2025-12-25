@@ -138,15 +138,21 @@ export class AuthMockAdapter implements IAuthAdapter {
   }> {
     await fakeDelay();
     
-    // Simulate unauthorized (no token)
-    if (typeof window !== 'undefined' && !localStorage.getItem('authToken')) {
-      throw new Error('Unauthorized');
+    // In mock mode, if there's a token, always return a mock user
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      if (token) {
+        // Extract email from token or use default
+        const mockData = createMockUser('admin@restaurant.com');
+        console.log('🎭 [MockAdapter] Returning mock user for token:', token.substring(0, 20) + '...');
+        return {
+          user: mockData.user,
+          tenant: mockData.tenant,
+        };
+      }
     }
     
-    const mockData = createMockUser('admin@restaurant.com');
-    return {
-      user: mockData.user,
-      tenant: mockData.tenant,
-    };
+    // No token - throw unauthorized
+    throw new Error('Unauthorized');
   }
 }

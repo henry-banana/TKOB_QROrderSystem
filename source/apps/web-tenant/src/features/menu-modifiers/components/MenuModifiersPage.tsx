@@ -940,7 +940,7 @@ export function MenuModifiersPage() {
 
                 {/* Options List */}
                 {formOptions.length > 0 ? (
-                  <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                  <div className="space-y-2 border border-gray-200 rounded-lg p-3">
                     {formOptions.map((option, idx) => (
                       <div
                         key={idx}
@@ -1235,7 +1235,7 @@ export function MenuModifiersPage() {
 
                 {/* Options List */}
                 {formOptions.length > 0 ? (
-                  <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3">
+                  <div className="space-y-2 border border-gray-200 rounded-lg p-3">
                     {formOptions.map((option, idx) => (
                       <div
                         key={idx}

@@ -27,6 +27,32 @@ import {
 } from '@/services/generated/menu-modifiers/menu-modifiers';
 
 export class MenuApiAdapter implements IMenuAdapter {
+  /**
+   * Transform menu item response to flatten nested modifierGroups structure
+   * Maps: modifierGroups[].modifierGroup → modifierGroups[]
+   */
+  private transformMenuItemResponse(item: any): any {
+    if (!item) return item;
+
+    return {
+      ...item,
+      modifierGroups: item.modifierGroups
+        ? item.modifierGroups.map((mm: any) => ({
+            id: mm.modifierGroup.id,
+            name: mm.modifierGroup.name,
+            description: mm.modifierGroup.description,
+            type: mm.modifierGroup.type,
+            required: mm.modifierGroup.required,
+            minChoices: mm.modifierGroup.minChoices,
+            maxChoices: mm.modifierGroup.maxChoices,
+            displayOrder: mm.modifierGroup.displayOrder,
+            active: mm.modifierGroup.active,
+            options: mm.modifierGroup.options || [],
+          }))
+        : [],
+    };
+  }
+
   // Categories
   async listCategories(params?: { activeOnly?: boolean }) {
     const data = await menuCategoryControllerFindAll(params);
@@ -68,7 +94,7 @@ export class MenuApiAdapter implements IMenuAdapter {
     // Wrap array response into expected format
     if (Array.isArray(data)) {
       return {
-        data,
+        data: data.map(item => this.transformMenuItemResponse(item)),
         meta: {
           total: data.length,
           page: 1,
@@ -77,12 +103,16 @@ export class MenuApiAdapter implements IMenuAdapter {
         },
       };
     }
-    // If already wrapped, return as-is
+    // If already wrapped, transform data array
+    if (data?.data) {
+      data.data = data.data.map((item: any) => this.transformMenuItemResponse(item));
+    }
     return data;
   }
 
   async getMenuItemById(id: string) {
-    return menuItemsControllerFindOne(id);
+    const item = await menuItemsControllerFindOne(id);
+    return this.transformMenuItemResponse(item);
   }
 
   async createMenuItem(data: any) {

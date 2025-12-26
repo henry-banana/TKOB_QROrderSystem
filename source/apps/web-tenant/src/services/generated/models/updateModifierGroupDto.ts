@@ -12,10 +12,14 @@ export interface UpdateModifierGroupDto {
   active?: boolean;
   description?: string;
   displayOrder?: number;
+  /** Maximum options customer can select. For SINGLE_CHOICE must be 1, for MULTI_CHOICE must be >= minChoices */
   maxChoices?: number;
+  /** Minimum options customer must select. If required=true, must be >= 1 */
   minChoices?: number;
   name?: string;
   options?: ModifierOptionDto[];
+  /** If true, customer must select at least 1 option */
   required?: boolean;
+  /** SINGLE_CHOICE: radio button | MULTI_CHOICE: checkboxes */
   type?: UpdateModifierGroupDtoType;
 }

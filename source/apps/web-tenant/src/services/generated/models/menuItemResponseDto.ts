@@ -13,7 +13,6 @@ export interface MenuItemResponseDto {
   available: boolean;
   category?: MenuCategoryResponseDto;
   categoryId: string;
-  categoryName: string;
   createdAt: string;
   description?: string;
   displayOrder: number;
@@ -21,6 +20,11 @@ export interface MenuItemResponseDto {
   imageUrl?: string;
   modifierGroups?: ModifierGroupResponseDto[];
   name: string;
+  /**
+   * @minimum 0
+   * @maximum 240
+   */
+  preparationTime: number;
   price: number;
   publishedAt?: string;
   status: string;

@@ -6,6 +6,9 @@
  * OpenAPI spec version: 1.0
  */
 
+/**
+ * SINGLE_CHOICE: radio button | MULTI_CHOICE: checkboxes
+ */
 export type UpdateModifierGroupDtoType = typeof UpdateModifierGroupDtoType[keyof typeof UpdateModifierGroupDtoType];
 
 

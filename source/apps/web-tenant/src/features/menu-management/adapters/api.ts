@@ -29,7 +29,21 @@ import {
 export class MenuApiAdapter implements IMenuAdapter {
   // Categories
   async listCategories(params?: { activeOnly?: boolean }) {
-    return menuCategoryControllerFindAll(params);
+    const data = await menuCategoryControllerFindAll(params);
+    // Wrap array response into expected format
+    if (Array.isArray(data)) {
+      return {
+        data,
+        meta: {
+          total: data.length,
+          page: 1,
+          limit: 100,
+          totalPages: 1,
+        },
+      };
+    }
+    // If already wrapped (shouldn't happen), return as-is
+    return data;
   }
 
   async getCategoryById(id: string) {
@@ -50,7 +64,21 @@ export class MenuApiAdapter implements IMenuAdapter {
 
   // Menu Items
   async listMenuItems() {
-    return menuItemsControllerFindAll();
+    const data = await menuItemsControllerFindAll();
+    // Wrap array response into expected format
+    if (Array.isArray(data)) {
+      return {
+        data,
+        meta: {
+          total: data.length,
+          page: 1,
+          limit: 100,
+          totalPages: 1,
+        },
+      };
+    }
+    // If already wrapped, return as-is
+    return data;
   }
 
   async getMenuItemById(id: string) {
@@ -71,7 +99,8 @@ export class MenuApiAdapter implements IMenuAdapter {
 
   // Modifier Groups
   async listModifierGroups(params?: { activeOnly?: boolean }) {
-    return modifierGroupControllerFindAll(params);
+    const data = await modifierGroupControllerFindAll(params ?? {});
+    return data;
   }
 
   async getModifierGroupById(id: string) {

@@ -171,21 +171,15 @@ export function CategoryPanel({
                   </button>
                 </div>
 
-                {/* Row 2: Status Badge */}
-                <div className="flex items-center gap-1 px-2">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium shrink-0 ${
-                      isActive
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : 'bg-gray-100 text-gray-600'
-                    }`}
-                  >
-                    {isActive ? 'Active' : 'Inactive'}
-                  </span>
-                  {!isActive && (
+                {/* Row 2: Status Badge - Only show Inactive */}
+                {!isActive && (
+                  <div className="flex items-center gap-1 px-2">
+                    <span className="px-2 py-0.5 rounded-full text-xs font-medium shrink-0 bg-gray-100 text-gray-600">
+                      Inactive
+                    </span>
                     <span className="text-xs text-gray-500 ml-1">May be hidden</span>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             );
           })}

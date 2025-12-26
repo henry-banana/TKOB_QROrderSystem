@@ -24,12 +24,20 @@ export const envSchema = z
     REDIS_PASSWORD: z.string().optional(),
     REDIS_DB: z.coerce.number().default(0),
 
-    // Email Config
-    EMAIL_HOST: z.string().default('smtp.gmail.com'),
-    EMAIL_PORT: z.coerce.number().default(587),
-    EMAIL_SECURE: z.coerce.boolean().default(false),
-    EMAIL_USER: z.string().email(),
-    EMAIL_PASSWORD: z.string().min(1),
+    // Email Config - Support multiple providers
+    EMAIL_PROVIDER: z.enum(['smtp', 'sendgrid']).default('smtp'),
+    
+    // SendGrid Config
+    SENDGRID_API_KEY: z.string().optional(),
+    
+    // SMTP Config (legacy)
+    EMAIL_HOST: z.string().optional(),
+    EMAIL_PORT: z.coerce.number().optional(),
+    EMAIL_SECURE: z.coerce.boolean().optional(),
+    EMAIL_USER: z.string().optional(),
+    EMAIL_PASSWORD: z.string().optional(),
+    
+    // Common
     EMAIL_FROM: z.string().default('QR Ordering <noreply@qr-ordering.com>'),
 
     // OTP Config
@@ -73,6 +81,22 @@ export const envSchema = z
     },
     {
       message: 'AWS credentials required when STORAGE_DRIVER=s3',
+    },
+  )
+  .refine(
+    (data) => {
+      // Validate SendGrid config
+      if (data.EMAIL_PROVIDER === 'sendgrid') {
+        return !!data.SENDGRID_API_KEY;
+      }
+      // Validate SMTP config
+      if (data.EMAIL_PROVIDER === 'smtp') {
+        return !!data.EMAIL_HOST && !!data.EMAIL_USER && !!data.EMAIL_PASSWORD;
+      }
+      return true;
+    },
+    {
+      message: 'Email provider configuration is incomplete',
     },
   );
 

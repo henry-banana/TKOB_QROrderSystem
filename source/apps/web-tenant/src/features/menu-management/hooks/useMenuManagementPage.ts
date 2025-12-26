@@ -98,6 +98,7 @@ export function useMenuManagementPage() {
     formState: { errors, isSubmitting, isValid },
     reset,
     watch,
+    setError,
   } = useForm<CategoryFormData>({
     resolver: zodResolver(categorySchema),
     mode: 'onChange',
@@ -133,9 +134,9 @@ export function useMenuManagementPage() {
 
   // ============ DERIVED COMPUTATIONS ============
   const getCategoryItemCount = (categoryId: string): number => {
-    return menuItems.filter(
-      (item: any) => item.categoryId === categoryId
-    ).length;
+    // Server now provides itemCount directly
+    const category = categories?.find((cat: any) => cat.id === categoryId);
+    return category?.itemCount ?? 0;
   };
 
   const getCategoryActiveItemCount = (categoryId: string): number => {
@@ -240,8 +241,21 @@ export function useMenuManagementPage() {
       setEditingCategoryId(null);
       reset();
       setShowSuccessToast(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in category submit:', error);
+      
+      // Handle 409 Conflict (duplicate category name)
+      if (error?.status === 409 || error?.response?.status === 409) {
+        setError('name', {
+          type: 'manual',
+          message: 'A category with this name already exists'
+        });
+      } else if (error?.response?.data?.message) {
+        // Handle other server validation errors
+        setToastMessage(`Error: ${error.response.data.message}`);
+      } else {
+        setToastMessage('An error occurred while saving the category');
+      }
     }
   };
 

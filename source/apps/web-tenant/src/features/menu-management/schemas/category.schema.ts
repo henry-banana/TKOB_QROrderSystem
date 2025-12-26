@@ -2,9 +2,13 @@ import { z } from 'zod';
 
 export const categorySchema = z.object({
   name: z.string()
-    .min(2, 'Category name must be at least 2 characters')
-    .max(50, 'Category name must not exceed 50 characters'),
-  description: z.string().optional().nullable().default(null),
+    .min(1, 'Category name must be at least 1 character')
+    .max(100, 'Category name must not exceed 100 characters'),
+  description: z.string()
+    .max(500, 'Description must not exceed 500 characters')
+    .optional()
+    .nullable()
+    .default(null),
   displayOrder: z.union([
     z.coerce.number().int('Display order must be a whole number').nonnegative('Display order must be 0 or higher'),
     z.literal('')

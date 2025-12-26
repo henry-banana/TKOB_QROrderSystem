@@ -100,6 +100,19 @@ export class MenuApiAdapter implements IMenuAdapter {
   // Modifier Groups
   async listModifierGroups(params?: { activeOnly?: boolean }) {
     const data = await modifierGroupControllerFindAll(params ?? {});
+    // Wrap array response into expected format
+    if (Array.isArray(data)) {
+      return {
+        data,
+        meta: {
+          total: data.length,
+          page: 1,
+          limit: 100,
+          totalPages: 1,
+        },
+      };
+    }
+    // If already wrapped, return as-is
     return data;
   }
 

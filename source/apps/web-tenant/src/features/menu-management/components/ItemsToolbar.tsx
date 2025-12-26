@@ -60,15 +60,15 @@ export function ItemsToolbar({
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           </div>
 
-          {/* Archive Status */}
+          {/* Availability Filter */}
           <div className="relative">
             <select
               value={tempSelectedArchiveStatus}
               onChange={(e) => onArchiveStatusChange(e.target.value as 'all' | 'archived')}
               className="appearance-none pl-3 pr-8 py-2 border border-gray-300 bg-white text-gray-700 cursor-pointer rounded-xl text-sm font-medium min-w-32 h-10"
             >
-              <option value="all">Active Items</option>
-              <option value="archived">Archived Items</option>
+              <option value="all">Available</option>
+              <option value="archived">Unavailable</option>
             </select>
             <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
           </div>

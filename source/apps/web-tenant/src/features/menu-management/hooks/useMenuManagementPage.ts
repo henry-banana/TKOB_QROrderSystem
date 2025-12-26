@@ -519,7 +519,7 @@ export function useMenuManagementPage() {
     if (!itemToDelete) return;
 
     try {
-      await deleteItemMutation.mutateAsync({ id: itemToDelete.id });
+      await deleteItemMutation.mutateAsync(itemToDelete.id);
       setToastMessage(`Món "${itemToDelete.name}" đã được xóa`);
       setShowSuccessToast(true);
       setIsDeleteModalOpen(false);

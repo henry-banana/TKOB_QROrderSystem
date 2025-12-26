@@ -216,9 +216,14 @@ export function useMenuManagementPage() {
         return (b.name || '').localeCompare((a.name || ''), 'en', { numeric: true });
       }
       return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    })
+    .map((item: any) => {
+      const category = categories?.find((cat: any) => cat.id === item.categoryId);
+      return {
+        ...item,
+        categoryName: category?.name || 'Uncategorized',
+      };
     });
-
-  // ============ CATEGORY HANDLERS ============
   const onCategorySubmit = async (data: CategoryFormData) => {
     try {
       const payload = {

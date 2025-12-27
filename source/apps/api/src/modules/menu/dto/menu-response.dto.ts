@@ -177,6 +177,9 @@ export class PublicMenuItemDto {
   @ApiPropertyOptional({ type: [MenuItemPhotoResponseDto] })
   photos?: MenuItemPhotoResponseDto[];
 
+  @ApiProperty()
+  available: boolean;
+
   @ApiPropertyOptional()
   tags?: string[];
 

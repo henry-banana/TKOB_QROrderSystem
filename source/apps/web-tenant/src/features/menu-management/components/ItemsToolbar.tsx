@@ -13,6 +13,9 @@ type ItemsToolbarProps = {
   selectedAvailability: 'all' | 'available' | 'unavailable';
   tempSelectedAvailability: 'all' | 'available' | 'unavailable';
   onTempAvailabilityChange: (availability: 'all' | 'available' | 'unavailable') => void;
+  selectedChefRecommended: boolean;
+  tempSelectedChefRecommended: boolean;
+  onTempChefRecommendedChange: (checked: boolean) => void;
   showFilter: boolean;
   onToggleFilter: () => void;
   onResetFilters: () => void;
@@ -32,6 +35,9 @@ export function ItemsToolbar({
   selectedAvailability,
   tempSelectedAvailability,
   onTempAvailabilityChange,
+  selectedChefRecommended,
+  tempSelectedChefRecommended,
+  onTempChefRecommendedChange,
   showFilter,
   onToggleFilter,
   onResetFilters,
@@ -80,6 +86,8 @@ export function ItemsToolbar({
               onTempStatusChange={onTempStatusChange}
               tempSelectedAvailability={tempSelectedAvailability}
               onTempAvailabilityChange={onTempAvailabilityChange}
+              tempSelectedChefRecommended={tempSelectedChefRecommended}
+              onTempChefRecommendedChange={onTempChefRecommendedChange}
               onResetFilters={onResetFilters}
             />
           </div>
@@ -121,10 +129,10 @@ export function ItemsToolbar({
       </div>
 
       {/* Clear filter indicator */}
-      {(selectedStatus !== 'All Status' || selectedAvailability !== 'all') && (
+      {(selectedStatus !== 'All Status' || selectedAvailability !== 'all' || selectedChefRecommended) && (
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-600">
-            Filters: {selectedStatus !== 'All Status' && `${selectedStatus}`} {selectedAvailability !== 'all' && `${selectedAvailability.charAt(0).toUpperCase() + selectedAvailability.slice(1)}`}
+            Filters: {selectedStatus !== 'All Status' && `${selectedStatus}`} {selectedAvailability !== 'all' && `${selectedAvailability.charAt(0).toUpperCase() + selectedAvailability.slice(1)}`} {selectedChefRecommended && 'Chef Recommended'}
           </span>
           {onClearFilter && (
             <button

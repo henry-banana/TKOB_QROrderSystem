@@ -170,6 +170,9 @@ export function MenuManagementPage() {
               selectedAvailability={state.selectedAvailability}
               tempSelectedAvailability={state.tempSelectedAvailability}
               onTempAvailabilityChange={handlers.handleTempAvailabilityChange}
+              selectedChefRecommended={state.selectedChefRecommended}
+              tempSelectedChefRecommended={state.tempSelectedChefRecommended}
+              onTempChefRecommendedChange={state.setTempSelectedChefRecommended}
               showFilter={state.showFilter}
               onToggleFilter={handlers.handleToggleFilter}
               onResetFilters={handlers.handleResetFilters}

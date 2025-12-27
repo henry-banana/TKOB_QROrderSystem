@@ -70,6 +70,8 @@ export function useMenuManagementPage() {
   const [selectedAvailability, setSelectedAvailability] = useState<'all' | 'available' | 'unavailable'>('all');
   const [tempSelectedStatus, setTempSelectedStatus] = useState('All Status');
   const [tempSelectedAvailability, setTempSelectedAvailability] = useState<'all' | 'available' | 'unavailable'>('all');
+  const [selectedChefRecommended, setSelectedChefRecommended] = useState(false);
+  const [tempSelectedChefRecommended, setTempSelectedChefRecommended] = useState(false);
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -146,6 +148,7 @@ export function useMenuManagementPage() {
       ? true 
       : false,
     search: searchQuery || undefined,
+    chefRecommended: selectedChefRecommended ? true : undefined,
     sortBy: sortOption === 'Sort by: Popularity'
       ? 'popularity'
       : sortOption === 'Sort by: Price (Low)' || sortOption === 'Sort by: Price (High)'
@@ -700,14 +703,17 @@ export function useMenuManagementPage() {
   const handleApplyFilters = () => {
     setSelectedStatus(tempSelectedStatus);
     setSelectedAvailability(tempSelectedAvailability);
+    setSelectedChefRecommended(tempSelectedChefRecommended);
     setShowFilter(false);
   };
 
   const handleClearFilters = () => {
     setSelectedStatus('All Status');
     setSelectedAvailability('all');
+    setSelectedChefRecommended(false);
     setTempSelectedStatus('All Status');
     setTempSelectedAvailability('all');
+    setTempSelectedChefRecommended(false);
   };
 
   // ============ RETURN GROUPED OBJECT ============
@@ -735,6 +741,10 @@ export function useMenuManagementPage() {
       setTempSelectedStatus,
       tempSelectedAvailability,
       setTempSelectedAvailability,
+      selectedChefRecommended,
+      setSelectedChefRecommended,
+      tempSelectedChefRecommended,
+      setTempSelectedChefRecommended,
       isAddCategoryModalOpen,
       setIsAddCategoryModalOpen,
       editingCategoryId,

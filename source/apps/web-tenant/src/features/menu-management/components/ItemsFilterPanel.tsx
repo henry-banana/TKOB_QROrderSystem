@@ -10,6 +10,8 @@ type ItemsFilterPanelProps = {
   onTempStatusChange: (status: string) => void;
   tempSelectedAvailability: 'all' | 'available' | 'unavailable';
   onTempAvailabilityChange: (availability: 'all' | 'available' | 'unavailable') => void;
+  tempSelectedChefRecommended: boolean;
+  onTempChefRecommendedChange: (checked: boolean) => void;
   onResetFilters: () => void;
 };
 
@@ -20,6 +22,8 @@ export function ItemsFilterPanel({
   onTempStatusChange,
   tempSelectedAvailability,
   onTempAvailabilityChange,
+  tempSelectedChefRecommended,
+  onTempChefRecommendedChange,
   onResetFilters,
 }: ItemsFilterPanelProps) {
   if (!showFilter) return null;
@@ -28,7 +32,7 @@ export function ItemsFilterPanel({
     <div className="absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden">
       <div className="p-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-2">
           <h4 className="text-sm font-semibold text-gray-900">Filter</h4>
           <button
             onClick={onToggleFilter}
@@ -40,9 +44,9 @@ export function ItemsFilterPanel({
 
         {/* Status Filter */}
         <div>
-          <h5 className="text-sm font-semibold text-gray-900 mb-3">Filter by Status</h5>
+          <h5 className="text-sm font-semibold text-gray-900 mb-1">Filter by Status</h5>
           <div className="space-y-2">
-            <label className="flex items-center p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <label className="flex items-center p-1 mb-0 rounded-lg hover:bg-gray-50 cursor-pointer">
               <input
                 type="radio"
                 name="status-filter"
@@ -53,7 +57,7 @@ export function ItemsFilterPanel({
               <span className="text-sm text-gray-700 ml-2">All Status</span>
             </label>
 
-            <label className="flex items-center p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <label className="flex items-center p-1 rounded-lg mb-0 hover:bg-gray-50 cursor-pointer">
               <input
                 type="radio"
                 name="status-filter"
@@ -64,7 +68,7 @@ export function ItemsFilterPanel({
               <span className="text-sm text-gray-700 ml-2">Draft</span>
             </label>
 
-            <label className="flex items-center p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <label className="flex items-center p-1 rounded-lg mb-0 hover:bg-gray-50 cursor-pointer">
               <input
                 type="radio"
                 name="status-filter"
@@ -75,7 +79,7 @@ export function ItemsFilterPanel({
               <span className="text-sm text-gray-700 ml-2">Published</span>
             </label>
 
-            <label className="flex items-center p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <label className="flex items-center p-1 rounded-lg mb-0 hover:bg-gray-50 cursor-pointer">
               <input
                 type="radio"
                 name="status-filter"
@@ -89,10 +93,10 @@ export function ItemsFilterPanel({
         </div>
 
         {/* Availability Filter */}
-        <div className="mt-4 pt-4 border-t border-gray-100">
-          <h5 className="text-sm font-semibold text-gray-900 mb-3">Filter by Availability</h5>
+        <div className="mt-2 pt-2 border-t border-gray-100">
+          <h5 className="text-sm font-semibold text-gray-900 mb-1">Filter by Availability</h5>
           <div className="space-y-2">
-            <label className="flex items-center p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <label className="flex items-center p-1 rounded-lg mb-0 hover:bg-gray-50 cursor-pointer">
               <input
                 type="radio"
                 name="availability-filter"
@@ -103,7 +107,7 @@ export function ItemsFilterPanel({
               <span className="text-sm text-gray-700 ml-2">All Items</span>
             </label>
 
-            <label className="flex items-center p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <label className="flex items-center p-1 rounded-lg mb-0 hover:bg-gray-50 cursor-pointer">
               <input
                 type="radio"
                 name="availability-filter"
@@ -114,7 +118,7 @@ export function ItemsFilterPanel({
               <span className="text-sm text-gray-700 ml-2">Available</span>
             </label>
 
-            <label className="flex items-center p-2 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <label className="flex items-center p-1 rounded-lg mb-0 hover:bg-gray-50 cursor-pointer">
               <input
                 type="radio"
                 name="availability-filter"
@@ -127,8 +131,21 @@ export function ItemsFilterPanel({
           </div>
         </div>
 
+        {/* Chef Recommended Filter */}
+        <div className="mt-2 pt-2 border-t border-gray-100">
+          <label className="flex items-center p-1 rounded-lg hover:bg-gray-50 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={tempSelectedChefRecommended}
+              onChange={(e) => onTempChefRecommendedChange(e.target.checked)}
+              className="w-4 h-4 text-emerald-600 rounded"
+            />
+            <span className="text-sm text-gray-700 ml-2">Chef Recommended Only</span>
+          </label>
+        </div>
+
         {/* Buttons */}
-        <div className="mt-4 pt-4 border-t border-gray-100 px-4">
+        <div className="mt-2 pt-2 border-t border-gray-100 px-4">
           <button
             onClick={onResetFilters}
             className="w-full px-3 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"

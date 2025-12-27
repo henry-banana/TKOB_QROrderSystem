@@ -7,12 +7,14 @@
  */
 import type { MenuCategoryResponseDto } from './menuCategoryResponseDto';
 import type { ModifierGroupResponseDto } from './modifierGroupResponseDto';
+import type { MenuItemPhotoResponseDto } from './menuItemPhotoResponseDto';
 
 export interface MenuItemResponseDto {
   allergens?: string[];
   available: boolean;
   category?: MenuCategoryResponseDto;
   categoryId: string;
+  chefRecommended: boolean;
   createdAt: string;
   description?: string;
   displayOrder: number;
@@ -20,6 +22,7 @@ export interface MenuItemResponseDto {
   imageUrl?: string;
   modifierGroups?: ModifierGroupResponseDto[];
   name: string;
+  photos?: MenuItemPhotoResponseDto[];
   /**
    * @minimum 0
    * @maximum 240

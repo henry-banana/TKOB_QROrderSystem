@@ -96,7 +96,7 @@ export const menuItemsControllerFindAll = (
 ) => {
       
       
-      return customInstance<void>(
+      return customInstance<MenuItemResponseDto[]>(
       {url: `/api/v1/menu/item`, method: 'GET',
         params, signal
     },

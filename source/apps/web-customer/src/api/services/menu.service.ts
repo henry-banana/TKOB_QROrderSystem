@@ -54,16 +54,27 @@ export const MenuService = {
     
     // Transform backend response to frontend format
     const items: MenuItem[] = menuData.categories.flatMap(cat =>
-      cat.items.map(item => ({
-        id: item.id,
-        name: item.name,
-        description: item.description || '',
-        category: cat.name,
-        basePrice: item.price,
-        imageUrl: item.imageUrl || '',
-        dietary: item.tags as any,
-        availability: item.available ? ('Available' as const) : ('Sold out' as const),
-      }))
+      cat.items.map(item => {
+        const rawPrice: any = (item as any).price;
+        const numericPrice =
+          typeof rawPrice === 'number'
+            ? rawPrice
+            : rawPrice != null
+              ? parseFloat(rawPrice)
+              : 0;
+
+        return {
+          id: item.id,
+          name: item.name,
+          description: item.description || '',
+          category: cat.name,
+          basePrice: Number.isFinite(numericPrice) ? numericPrice : 0,
+          imageUrl: item.imageUrl || '',
+          dietary: item.tags as any,
+          // Available => customer can interact, Unavailable => read-only item
+          availability: item.available ? ('Available' as const) : ('Unavailable' as const),
+        };
+      })
     );
     
     const categories = menuData.categories.map(cat => cat.name);

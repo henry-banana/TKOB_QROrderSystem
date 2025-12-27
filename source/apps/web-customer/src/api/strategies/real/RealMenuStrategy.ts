@@ -1,7 +1,7 @@
 // Real Menu Strategy - calls actual backend API
 
 import apiClient from '@/api/client';
-import { ApiResponse, MenuItem } from '@/types';
+import { ApiResponse, MenuItem, PhotoDto, ModifierGroupDto } from '@/types';
 import { IMenuStrategy } from '../interfaces';
 
 interface MenuCategoryDto {
@@ -9,33 +9,45 @@ interface MenuCategoryDto {
   name: string;
   description?: string;
   displayOrder: number;
-  active: boolean;
-  createdAt: string;
-  updatedAt: string;
 }
 
 interface MenuItemDto {
   id: string;
   name: string;
   description?: string;
-  categoryId: string;
   price: number;
   imageUrl?: string;
-  status: string;
-  available: boolean;
+  primaryPhoto?: PhotoDto;
+  photos?: PhotoDto[];
   tags?: string[];
   allergens?: string[];
+  modifierGroups?: ModifierGroupDto[];
+  preparationTime?: number;
+  chefRecommended?: boolean;
+  popularity?: number;
   displayOrder: number;
-  category?: MenuCategoryDto;
-  createdAt: string;
-  updatedAt: string;
-  publishedAt?: string;
+  available?: boolean;
+  status?: string;
+}
+
+interface PaginationDto {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
 }
 
 interface PublicMenuResponseDto {
-  categories: Array<MenuCategoryDto & {
+  categories: Array<{
+    id: string;
+    name: string;
+    description?: string;
+    displayOrder: number;
     items: MenuItemDto[];
   }>;
+  pagination?: PaginationDto;
   publishedAt: string;
 }
 
@@ -47,17 +59,55 @@ export class RealMenuStrategy implements IMenuStrategy {
     const menuData = response.data.data;
     
     // Transform backend response to frontend format
+    // Backend already filters by status='PUBLISHED', so we only receive published items
     const items: MenuItem[] = menuData.categories.flatMap(cat =>
-      cat.items.map(item => ({
-        id: item.id,
-        name: item.name,
-        description: item.description || '',
-        category: cat.name,
-        basePrice: item.price,
-        imageUrl: item.imageUrl || '',
-        dietary: item.tags as any,
-        availability: item.available ? ('Available' as const) : ('Sold out' as const),
-      }))
+      cat.items.map(item => {
+        const rawPrice: any = (item as any).price;
+        const numericPrice =
+          typeof rawPrice === 'number'
+            ? rawPrice
+            : rawPrice != null
+              ? parseFloat(rawPrice)
+              : 0;
+
+        // Determine badge based on backend flags
+        let badge: 'Chef\'s recommendation' | 'Popular' | undefined;
+        if (item.chefRecommended) {
+          badge = 'Chef\'s recommendation';
+        } else if (item.popularity && item.popularity > 0) {
+          badge = 'Popular';
+        }
+
+        // Determine availability based on the 'available' boolean field
+        // Backend already filtered by status='PUBLISHED', so all items here are published
+        // We only need to check the 'available' field
+        let availability: 'Available' | 'Unavailable' | 'Sold out';
+        
+        if (item.available === false) {
+          availability = 'Unavailable';
+        } else {
+          // Default to Available (available === true or undefined means available)
+          availability = 'Available';
+        }
+
+        return {
+          id: item.id,
+          name: item.name,
+          description: item.description || '',
+          category: cat.name,
+          basePrice: Number.isFinite(numericPrice) ? numericPrice : 0,
+          imageUrl: item.primaryPhoto?.url || item.imageUrl || '',
+          primaryPhoto: item.primaryPhoto,
+          photos: item.photos,
+          modifierGroups: item.modifierGroups,
+          preparationTime: item.preparationTime,
+          chefRecommended: item.chefRecommended,
+          popularity: item.popularity,
+          dietary: item.tags as any,
+          badge,
+          availability,
+        };
+      })
     );
     
     const categories = menuData.categories.map(cat => cat.name);

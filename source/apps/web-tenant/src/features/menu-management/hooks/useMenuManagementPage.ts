@@ -439,11 +439,11 @@ export function useMenuManagementPage() {
         dietary: fullItemData.tags || [],
         allergens: fullItemData.allergens || [],
         chefRecommended: fullItemData.chefRecommended || false,
-        modifierGroupIds: fullItemData.modifierGroupIds || fullItemData.modifierGroups?.map((mg: any) => mg.id) || [],
+        modifierGroupIds: fullItemData.modifierGroups?.map((mg: any) => mg.id) || [],
       });
       
       // Initialize photo manager with existing photos from full data
-      const existingPhotos = fullItemData.photos || fullItemData.menuItemPhotos || [];
+      const existingPhotos = fullItemData.photos || [];
       photoManager.initializeFromExistingPhotos(existingPhotos);
       
     } catch (error) {

@@ -12,8 +12,8 @@ type ModifiersToolbarProps = {
   onToggleFilterDropdown: () => void;
   tempSelectedType: 'all' | 'single' | 'multiple';
   onTempTypeChange: (type: 'all' | 'single' | 'multiple') => void;
-  tempSelectedStatus: 'active' | 'all';
-  onTempStatusChange: (status: 'active' | 'all') => void;
+  tempSelectedStatus: 'active' | 'all' | 'archived';
+  onTempStatusChange: (status: 'active' | 'all' | 'archived') => void;
   singleCount: number;
   multiCount: number;
   activeCount: number;

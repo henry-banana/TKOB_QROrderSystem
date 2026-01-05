@@ -5,7 +5,7 @@ import React from 'react';
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
-interface ModalProps {
+export interface ModalProps {
   isOpen: boolean;
   title: string;
   description?: string;
@@ -40,29 +40,29 @@ export function Modal({
     <div
       className="fixed inset-0 flex items-center justify-center z-50 animate-fade-in p-4"
       style={{
-        backgroundColor: 'rgba(255, 255, 255, 0.4)',
+        backgroundColor: 'rgba(15, 23, 42, 0.6)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
       }}
       onClick={onClose}
     >
       <div
-        className={`bg-white w-full ${maxWidthClass} flex flex-col animate-scale-in relative`}
+        className={`bg-white w-full ${maxWidthClass} flex flex-col animate-scale-in relative border border-default`}
         style={{
-          borderRadius: '12px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+          borderRadius: '16px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           maxHeight: '90vh',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header - Fixed */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 shrink-0">
+        <div className="flex items-center justify-between p-6 border-b border-default shrink-0">
           <div className="flex flex-col gap-1">
-            <h3 className="text-gray-900" style={{ fontSize: '22px', fontWeight: 700 }}>
+            <h3 className="text-text-primary" style={{ fontSize: '22px', fontWeight: 700 }}>
               {title}
             </h3>
             {description && (
-              <p className="text-gray-600" style={{ fontSize: '14px' }}>
+              <p className="text-text-secondary" style={{ fontSize: '14px' }}>
                 {description}
               </p>
             )}
@@ -70,9 +70,9 @@ export function Modal({
           {closeButton && (
             <button
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-elevated rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 text-gray-400" />
+              <X className="w-5 h-5 text-text-tertiary" />
             </button>
           )}
         </div>
@@ -84,7 +84,7 @@ export function Modal({
 
         {/* Footer - Fixed */}
         {footer && (
-          <div className="flex gap-3 p-6 border-t border-gray-200 shrink-0">
+          <div className="flex gap-3 p-6 border-t border-default shrink-0">
             {footer}
           </div>
         )}

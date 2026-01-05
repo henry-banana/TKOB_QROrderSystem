@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
-import { ROUTES } from '@/lib/routes';
+import { ROUTES } from '@/shared/config';
 
 export type AdminScreenId =
   | 'dashboard'
@@ -31,7 +31,8 @@ export type AdminNavItem =
   | 'service-board'
   | 'analytics'
   | 'staff'
-  | 'tenant-profile';
+  | 'tenant-profile'
+  | 'account-settings';
 
 export interface AdminShellProps {
   restaurantName?: string;
@@ -46,6 +47,7 @@ export const AdminShell: React.FC<AdminShellProps> = ({
 }) => {
   const pathname = usePathname();
   const router = useRouter();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const activeItem: AdminNavItem = useMemo(() => {
     if (pathname.includes('/admin/dashboard')) return 'dashboard';
@@ -55,12 +57,8 @@ export const AdminShell: React.FC<AdminShellProps> = ({
     if (pathname.includes('/admin/analytics')) return 'analytics';
     if (pathname.includes('/admin/staff')) return 'staff';
     if (pathname.includes('/admin/tenant-profile')) return 'tenant-profile';
-    if (pathname.includes('/admin/account-settings')) return 'tenant-profile';
+    if (pathname.includes('/admin/account-settings')) return 'account-settings';
     return 'dashboard';
-  }, [pathname]);
-
-  const disableContentScroll = useMemo(() => {
-    return pathname.includes('/admin/menu') || pathname.includes('/admin/dashboard');
   }, [pathname]);
 
   const handleNavigate = (screen: AdminScreenId) => {
@@ -86,23 +84,63 @@ export const AdminShell: React.FC<AdminShellProps> = ({
     }
   };
 
+  const handleToggleSidebar = () => {
+    setSidebarCollapsed(!sidebarCollapsed);
+  };
+
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
-      <Sidebar activeItem={activeItem} onNavigate={handleNavigate} />
+    <div className="flex flex-col h-screen bg-gray-50">
+      {/* TopBar - Fixed at top (not position:fixed, just at top of flex) */}
+      <TopBar
+        restaurantName={restaurantName}
+        onNavigate={handleNavigate}
+        enableDevModeSwitch={enableDevModeSwitch}
+        onMenuToggle={handleToggleSidebar}
+      />
 
-      <div className="flex-1 md:ml-64 flex flex-col">
-        <header className="shrink-0">
-          <TopBar
-            restaurantName={restaurantName}
-            onNavigate={handleNavigate}
-            enableDevModeSwitch={enableDevModeSwitch}
-          />
-        </header>
+      {/* Main Area: Sidebar + Content - fills remaining height */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Sidebar - scrolls with content, not fixed */}
+        <Sidebar 
+          activeItem={activeItem} 
+          onNavigate={handleNavigate}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={handleToggleSidebar}
+        />
 
-        <main className={`flex-1 bg-slate-50 ${disableContentScroll ? 'overflow-hidden' : 'overflow-y-auto'}`}>
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-auto">
           {children}
         </main>
       </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {sidebarCollapsed === false && (
+        <div 
+          className="md:hidden fixed inset-0 bg-black/50 z-30"
+          onClick={() => setSidebarCollapsed(true)}
+        />
+      )}
+
+      {/* Mobile Sidebar */}
+      <aside
+        className={`
+          md:hidden fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200
+          transform transition-transform duration-300
+          ${sidebarCollapsed ? '-translate-x-full' : 'translate-x-0'}
+        `}
+        style={{ top: '64px' }}
+      >
+        <Sidebar 
+          activeItem={activeItem} 
+          onNavigate={(screen) => {
+            handleNavigate(screen);
+            setSidebarCollapsed(true);
+          }}
+          collapsed={false}
+          onToggleCollapse={() => setSidebarCollapsed(true)}
+        />
+      </aside>
     </div>
   );
 };

@@ -1,5 +1,8 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+import { useAnimation } from '@/shared/hooks';
 
 /**
  * Modern Frosted-Glass Modal Demo
@@ -45,6 +48,15 @@ export function ModalDemo({
   primaryAction,
   secondaryAction,
 }: ModalDemoProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const { scaleIn } = useAnimation();
+
+  useEffect(() => {
+    if (isOpen && modalRef.current) {
+      scaleIn({ targets: modalRef.current, duration: 300 });
+    }
+  }, [isOpen, scaleIn]);
+
   if (!isOpen) return null;
 
   return (
@@ -58,7 +70,8 @@ export function ModalDemo({
       onClick={onClose}
     >
       <div
-        className="bg-white w-full max-w-md mx-4 animate-scale-in"
+        ref={modalRef}
+        className="bg-white w-full max-w-md mx-4 animate-scale-in opacity-0"
         style={{
           borderRadius: '20px',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
@@ -87,7 +100,7 @@ export function ModalDemo({
             {secondaryAction && (
               <button
                 onClick={secondaryAction.onClick}
-                className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+                className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                 style={{ fontSize: '15px', fontWeight: 600 }}
               >
                 {secondaryAction.label}
@@ -97,7 +110,7 @@ export function ModalDemo({
               <button
                 onClick={primaryAction.onClick}
                 disabled={primaryAction.disabled}
-                className="flex-1 px-4 py-3 bg-emerald-500 text-white rounded-xl hover:bg-emerald-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 px-4 py-3 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                 style={{ fontSize: '15px', fontWeight: 600 }}
               >
                 {primaryAction.label}

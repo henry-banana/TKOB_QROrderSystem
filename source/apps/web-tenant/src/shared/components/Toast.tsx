@@ -3,7 +3,7 @@
 import React, { useEffect } from 'react';
 import { CheckCircle, X, AlertCircle, Info } from 'lucide-react';
 
-interface ToastProps {
+export interface ToastProps {
   message: string;
   type?: 'success' | 'error' | 'info';
   onClose: () => void;
@@ -30,7 +30,7 @@ export function Toast({ message, type = 'success', onClose, duration = 3000 }: T
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-60 flex items-center gap-3 px-4 py-3 rounded-xl border ${bgColors[type]} shadow-lg`}
+      className={`fixed bottom-6 right-6 z-60 flex items-center gap-3 px-4 py-3 rounded-lg border ${bgColors[type]} shadow-lg`}
       style={{ minWidth: '280px', maxWidth: '420px' }}
     >
       {icons[type]}

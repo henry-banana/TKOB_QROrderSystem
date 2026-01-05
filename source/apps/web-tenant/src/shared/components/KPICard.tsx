@@ -10,11 +10,12 @@ interface KPICardProps {
     value: number;
     isPositive: boolean;
   };
+  className?: string;
 }
 
-export function KPICard({ title, value, icon: Icon, trend }: KPICardProps) {
+export function KPICard({ title, value, icon: Icon, trend, className }: KPICardProps) {
   return (
-    <Card className="p-6">
+    <Card className={`p-6 ${className || ''}`}>
       <div className="flex items-start justify-between">
         <div className="flex flex-col gap-2">
           <span className="text-gray-500" style={{ fontSize: '14px', fontWeight: 500 }}>{title}</span>
@@ -38,7 +39,7 @@ export function KPICard({ title, value, icon: Icon, trend }: KPICardProps) {
             </div>
           )}
         </div>
-        <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center">
+        <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
           <Icon className="w-5 h-5 text-emerald-500" />
         </div>
       </div>

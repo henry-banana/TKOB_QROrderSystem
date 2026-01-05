@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { UserMenu } from '@/shared/components/ui/UserMenu';
+import { UserMenu } from '@/shared/components/UserMenu';
 
 /**
  * Waiter TopBar

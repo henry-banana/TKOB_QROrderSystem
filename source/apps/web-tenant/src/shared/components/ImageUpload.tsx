@@ -109,7 +109,7 @@ export function ImageUpload({
     <div className={`flex flex-col gap-2 ${className}`}>
       {preview ? (
         // Preview State
-        <div className="border-2 border-emerald-500 rounded-xl p-6 flex flex-col items-center gap-3 bg-emerald-50 relative">
+        <div className="border-2 border-emerald-500 rounded-lg p-6 flex flex-col items-center gap-3 bg-emerald-50 relative">
           <button
             onClick={handleRemove}
             className="absolute top-2 right-2 p-1.5 bg-white hover:bg-red-50 rounded-lg transition-colors shadow-sm"
@@ -118,7 +118,7 @@ export function ImageUpload({
             <X className="w-4 h-4 text-gray-600" />
           </button>
 
-          <div className="w-32 h-32 bg-white rounded-xl flex items-center justify-center overflow-hidden shadow-sm">
+          <div className="w-32 h-32 bg-white rounded-lg flex items-center justify-center overflow-hidden shadow-sm">
             <ImageWithFallback
               src={preview}
               alt="Preview"
@@ -145,7 +145,7 @@ export function ImageUpload({
       ) : (
         // Upload State
         <label
-          className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center gap-3 cursor-pointer transition-all ${
+          className={`border-2 border-dashed rounded-lg p-8 flex flex-col items-center gap-3 cursor-pointer transition-all ${
             dragActive
               ? 'border-emerald-500 bg-emerald-50'
               : error
@@ -158,7 +158,7 @@ export function ImageUpload({
           onDrop={handleDrop}
         >
           <div
-            className={`w-16 h-16 rounded-xl flex items-center justify-center ${
+            className={`w-16 h-16 rounded-lg flex items-center justify-center ${
               error ? 'bg-red-100' : 'bg-gray-100'
             }`}
           >

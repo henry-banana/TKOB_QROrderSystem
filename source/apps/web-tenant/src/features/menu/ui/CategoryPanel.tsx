@@ -35,7 +35,7 @@ export function CategoryPanel({
   setShowActiveOnlyCategories,
 }: CategoryPanelProps) {
   return (
-    <div className="w-52 bg-white border-r border-gray-200 flex flex-col overflow-y-auto relative">
+    <div className="w-52 bg-white border-r border-gray-200 flex flex-col min-h-0 overflow-hidden relative">
       <div className="px-3 py-2 border-b border-gray-200">
         <h3 className="text-gray-900 mb-3" style={{ fontSize: '16px', fontWeight: 700 }}>Categories</h3>
         <button
@@ -74,7 +74,7 @@ export function CategoryPanel({
         </label>
       </div>
 
-      <div className="flex-1 p-1" onClick={() => {}}>
+      <div className="flex-1 min-h-0 overflow-y-auto p-1" onClick={() => {}}>
         <div className="flex flex-col gap-1">
           {/* All Items */}
           <button

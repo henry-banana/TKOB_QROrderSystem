@@ -142,9 +142,9 @@ export function CategorySidebar({
   const filteredCategories = getFilteredAndSortedCategories();
 
   return (
-    <div className="hidden lg:flex w-64 bg-gray-50 border-r border-gray-200 flex-col">
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200">
+    <aside className="hidden lg:flex w-64 h-full bg-gray-50 border-r border-gray-200 flex-col min-h-0 overflow-hidden">
+      {/* Header - Fixed */}
+      <div className="shrink-0 p-6 border-b border-gray-200">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Categories</h3>
         
         {/* Active Only Filter */}
@@ -184,9 +184,8 @@ export function CategorySidebar({
         </button>
       </div>
 
-      {/* Category List */}
-      <div className="flex-1 overflow-y-auto p-4">
-        {isLoading ? (
+      {/* Category List - Scrollable */}
+      <div className="flex-1 overflow-y-auto p-4 pr-2 min-h-0">{isLoading ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-12 bg-gray-200 rounded-lg animate-pulse" />
@@ -304,7 +303,7 @@ export function CategorySidebar({
         </div>,
         document.body
       )}
-    </div>
+    </aside>
   );
 }
 

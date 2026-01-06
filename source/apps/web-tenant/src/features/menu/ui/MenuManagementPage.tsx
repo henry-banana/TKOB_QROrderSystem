@@ -505,7 +505,7 @@ export function MenuManagementPage() {
   const activeItems = menuItems.filter((item: any) => item.isAvailable && item.status !== 'ARCHIVED').length;
 
   return (
-    <div className="flex h-screen bg-primary">
+    <div className="flex h-full min-h-0 overflow-hidden bg-primary">
       {/* Category Sidebar */}
       <CategorySidebar
         categories={categories.map((cat: any) => ({
@@ -525,7 +525,7 @@ export function MenuManagementPage() {
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Toolbar */}
         <MenuToolbar
           searchQuery={searchInputValue}

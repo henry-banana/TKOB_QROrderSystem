@@ -4,11 +4,18 @@ import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { UtensilsCrossed, CheckCircle } from 'lucide-react';
 import { Card } from '@/shared/components/Card';
+import type { 
+  CreateMenuCategoryDto, 
+  UpdateMenuCategoryDto,
+  CreateMenuItemDto,
+  UpdateMenuItemDto,
+} from '@/services/generated/models';
 
 // Import feature hooks
 import {
   useMenuCategories,
   useCreateCategory,
+  useUpdateCategory,
   useDeleteCategory,
   useMenuItems,
   useCreateMenuItem,
@@ -26,7 +33,7 @@ import {
 } from './MenuComponents';
 import {
   MenuItemModal,
-  AddCategoryModal,
+  CategoryModal,
   DeleteConfirmModal,
 } from './MenuModals';
 
@@ -46,9 +53,17 @@ export function MenuManagementPage() {
   // ========== STATE ==========
   // Category state
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [categoryModalMode, setCategoryModalMode] = useState<'add' | 'edit'>('add');
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryDescription, setNewCategoryDescription] = useState('');
+  const [newCategoryDisplayOrder, setNewCategoryDisplayOrder] = useState('');
+  const [newCategoryActive, setNewCategoryActive] = useState(true);
+  
+  // Category filters
+  const [categoryActiveOnly, setCategoryActiveOnly] = useState(false);
+  const [categorySortBy, setCategorySortBy] = useState('displayOrder');
 
   // Filter state
   const [filters, setFilters] = useState<MenuFilters>({
@@ -101,15 +116,29 @@ export function MenuManagementPage() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['/api/v1/menu/categories'] });
-        setIsAddCategoryModalOpen(false);
-        setNewCategoryName('');
-        setNewCategoryDescription('');
+        handleCloseCategoryModal();
         setToastMessage('Danh mục đã được tạo');
         setShowSuccessToast(true);
       },
       onError: (error) => {
         console.error('Error creating category:', error);
         setToastMessage('Có lỗi khi tạo danh mục');
+        setShowSuccessToast(true);
+      },
+    }
+  });
+
+  const updateCategoryMutation = useUpdateCategory({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/v1/menu/categories'] });
+        handleCloseCategoryModal();
+        setToastMessage('Danh mục đã được cập nhật');
+        setShowSuccessToast(true);
+      },
+      onError: (error) => {
+        console.error('Error updating category:', error);
+        setToastMessage('Có lỗi khi cập nhật danh mục');
         setShowSuccessToast(true);
       },
     }
@@ -256,19 +285,70 @@ export function MenuManagementPage() {
     setFilters({ ...filters, categoryId });
   };
 
-  const handleAddCategory = async () => {
+  const handleOpenAddCategoryModal = () => {
+    setCategoryModalMode('add');
+    setEditingCategory(null);
+    setNewCategoryName('');
+    setNewCategoryDescription('');
+    setNewCategoryDisplayOrder('');
+    setNewCategoryActive(true);
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleEditCategory = (category: Category) => {
+    setCategoryModalMode('edit');
+    setEditingCategory(category);
+    setNewCategoryName(category.name);
+    setNewCategoryDescription(category.description || '');
+    setNewCategoryDisplayOrder(category.displayOrder.toString());
+    setNewCategoryActive(category.active);
+    setIsCategoryModalOpen(true);
+  };
+
+  const handleCloseCategoryModal = () => {
+    setIsCategoryModalOpen(false);
+    setEditingCategory(null);
+    setCategoryModalMode('add');
+    setNewCategoryName('');
+    setNewCategoryDescription('');
+    setNewCategoryDisplayOrder('');
+    setNewCategoryActive(true);
+  };
+
+  const handleSaveCategory = async () => {
     if (!newCategoryName.trim()) return;
     
-    await createCategoryMutation.mutateAsync({
-      data: {
-        name: newCategoryName,
-        description: newCategoryDescription || undefined,
-      }
+    const categoryData: CreateMenuCategoryDto = {
+      name: newCategoryName,
+      description: newCategoryDescription || undefined,
+      active: newCategoryActive,
+    };
+
+    if (newCategoryDisplayOrder.trim()) {
+      (categoryData as any).displayOrder = parseInt(newCategoryDisplayOrder);
+    }
+
+    if (categoryModalMode === 'edit' && editingCategory) {
+      await updateCategoryMutation.mutateAsync({
+        id: editingCategory.id,
+        data: categoryData as UpdateMenuCategoryDto,
+      });
+    } else {
+      await createCategoryMutation.mutateAsync(categoryData);
+    }
+  };
+
+  const handleToggleCategoryActive = async (category: Category) => {
+    await updateCategoryMutation.mutateAsync({
+      id: category.id,
+      data: { active: !category.active },
     });
+    setToastMessage(`Danh mục "${category.name}" đã ${!category.active ? 'kích hoạt' : 'vô hiệu hóa'}`);
+    setShowSuccessToast(true);
   };
 
   const handleDeleteCategory = async (categoryId: string) => {
-    await deleteCategoryMutation.mutateAsync({ id: categoryId });
+    await deleteCategoryMutation.mutateAsync(categoryId);
   };
 
   // Item modal handlers
@@ -311,21 +391,16 @@ export function MenuManagementPage() {
     try {
       if (itemModalMode === 'add') {
         const result = await createItemMutation.mutateAsync({
-          data: {
-            name: itemFormData.name,
-            categoryId: itemFormData.category,
-            description: itemFormData.description || undefined,
-            price: parseFloat(itemFormData.price),
-            modifierGroupIds: itemFormData.modifierGroupIds,
-          }
-        });
+          name: itemFormData.name,
+          categoryId: itemFormData.category,
+          description: itemFormData.description || undefined,
+          price: parseFloat(itemFormData.price),
+          modifierGroupIds: itemFormData.modifierGroupIds,
+        } as CreateMenuItemDto);
 
         // Upload photo if exists
         if (itemFormData.image && result?.id) {
-          await uploadPhotoMutation.mutateAsync({
-            itemId: result.id,
-            data: { file: itemFormData.image }
-          });
+          await uploadPhotoMutation.mutateAsync(itemFormData.image);
         }
 
         setToastMessage(`Món "${itemFormData.name}" đã được tạo`);
@@ -344,10 +419,7 @@ export function MenuManagementPage() {
 
         // Upload photo if exists
         if (itemFormData.image) {
-          await uploadPhotoMutation.mutateAsync({
-            itemId: currentEditItemId,
-            data: { file: itemFormData.image }
-          });
+          await uploadPhotoMutation.mutateAsync(itemFormData.image);
         }
 
         setToastMessage(`Món "${itemFormData.name}" đã được cập nhật`);
@@ -375,7 +447,7 @@ export function MenuManagementPage() {
     if (!itemToDelete) return;
 
     try {
-      await deleteItemMutation.mutateAsync({ id: itemToDelete.id });
+      await deleteItemMutation.mutateAsync(itemToDelete.id);
       setIsDeleteModalOpen(false);
       setItemToDelete(null);
     } catch (error) {
@@ -442,8 +514,14 @@ export function MenuManagementPage() {
         })) as any}
         selectedCategory={selectedCategory}
         onSelectCategory={handleSelectCategory}
-        onAddCategory={() => setIsAddCategoryModalOpen(true)}
+        onAddCategory={handleOpenAddCategoryModal}
         onDeleteCategory={handleDeleteCategory}
+        onEditCategory={handleEditCategory}
+        onToggleActive={handleToggleCategoryActive}
+        activeOnly={categoryActiveOnly}
+        onActiveOnlyChange={setCategoryActiveOnly}
+        sortBy={categorySortBy}
+        onSortChange={setCategorySortBy}
       />
 
       {/* Main Content */}
@@ -467,7 +545,7 @@ export function MenuManagementPage() {
           categories={categories.map((cat: any) => ({ id: cat.id, name: cat.name }))}
           selectedCategory={selectedCategory}
           onSelectCategory={handleSelectCategory}
-          onAddCategory={() => setIsAddCategoryModalOpen(true)}
+          onAddCategory={handleOpenAddCategoryModal}
         />
 
         {/* Content Area */}
@@ -539,18 +617,19 @@ export function MenuManagementPage() {
         onImageUpload={handleImageUpload}
       />
 
-      <AddCategoryModal
-        isOpen={isAddCategoryModalOpen}
+      <CategoryModal
+        isOpen={isCategoryModalOpen}
+        mode={categoryModalMode}
         name={newCategoryName}
         description={newCategoryDescription}
+        displayOrder={newCategoryDisplayOrder}
+        active={newCategoryActive}
         onNameChange={setNewCategoryName}
         onDescriptionChange={setNewCategoryDescription}
-        onClose={() => {
-          setIsAddCategoryModalOpen(false);
-          setNewCategoryName('');
-          setNewCategoryDescription('');
-        }}
-        onSave={handleAddCategory}
+        onDisplayOrderChange={setNewCategoryDisplayOrder}
+        onActiveChange={setNewCategoryActive}
+        onClose={handleCloseCategoryModal}
+        onSave={handleSaveCategory}
       />
 
       <DeleteConfirmModal

@@ -24,33 +24,45 @@ export const useMenuCategories = () => {
   });
 };
 
-export const useCreateCategory = () => {
+export const useCreateCategory = (options?: { mutation?: any }) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateMenuCategoryDto) => menuAdapter.categories.create(data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['menu', 'categories'] });
+      options?.mutation?.onSuccess?.(data);
+    },
+    onError: (error) => {
+      options?.mutation?.onError?.(error);
     },
   });
 };
 
-export const useUpdateCategory = () => {
+export const useUpdateCategory = (options?: { mutation?: any }) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateMenuCategoryDto }) => 
       menuAdapter.categories.update(id, data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['menu', 'categories'] });
+      options?.mutation?.onSuccess?.(data);
+    },
+    onError: (error) => {
+      options?.mutation?.onError?.(error);
     },
   });
 };
 
-export const useDeleteCategory = () => {
+export const useDeleteCategory = (options?: { mutation?: any }) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => menuAdapter.categories.delete(id),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['menu', 'categories'] });
+      options?.mutation?.onSuccess?.(data);
+    },
+    onError: (error) => {
+      options?.mutation?.onError?.(error);
     },
   });
 };
@@ -65,33 +77,45 @@ export const useMenuItems = () => {
   });
 };
 
-export const useCreateMenuItem = () => {
+export const useCreateMenuItem = (options?: { mutation?: any }) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateMenuItemDto) => menuAdapter.items.create(data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['menu', 'items'] });
+      options?.mutation?.onSuccess?.(data);
+    },
+    onError: (error) => {
+      options?.mutation?.onError?.(error);
     },
   });
 };
 
-export const useUpdateMenuItem = () => {
+export const useUpdateMenuItem = (options?: { mutation?: any }) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateMenuItemDto }) => 
       menuAdapter.items.update(id, data),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['menu', 'items'] });
+      options?.mutation?.onSuccess?.(data);
+    },
+    onError: (error) => {
+      options?.mutation?.onError?.(error);
     },
   });
 };
 
-export const useDeleteMenuItem = () => {
+export const useDeleteMenuItem = (options?: { mutation?: any }) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => menuAdapter.items.delete(id),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['menu', 'items'] });
+      options?.mutation?.onSuccess?.(data);
+    },
+    onError: (error) => {
+      options?.mutation?.onError?.(error);
     },
   });
 };
@@ -152,12 +176,16 @@ export const useDeleteModifier = (options?: { mutation?: any }) => {
 /**
  * Menu Photos Hooks
  */
-export const useUploadPhoto = () => {
+export const useUploadPhoto = (options?: { mutation?: any }) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (file: File) => menuAdapter.photos.upload(file),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['menu', 'items'] });
+      options?.mutation?.onSuccess?.(data);
+    },
+    onError: (error) => {
+      options?.mutation?.onError?.(error);
     },
   });
 };

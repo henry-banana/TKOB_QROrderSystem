@@ -20,8 +20,12 @@ export const menuCategoriesMock = {
   },
   async create(data: any) {
     await new Promise(resolve => setTimeout(resolve, 400));
+    const maxDisplayOrder = mockCategories.reduce((max, cat) => Math.max(max, cat.displayOrder || 0), -1);
     const newCategory = { 
       id: Date.now().toString(), 
+      displayOrder: maxDisplayOrder + 1,
+      active: true,
+      itemCount: 0,
       ...data,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

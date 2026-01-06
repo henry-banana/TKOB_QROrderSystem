@@ -5,7 +5,8 @@
  * Following feature-based architecture with component colocation
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Plus, 
   Edit, 
@@ -32,6 +33,12 @@ interface CategorySidebarProps {
   onSelectCategory: (categoryId: string) => void;
   onAddCategory: () => void;
   onDeleteCategory: (categoryId: string) => void;
+  onEditCategory: (category: Category) => void;
+  onToggleActive: (category: Category) => void;
+  activeOnly: boolean;
+  onActiveOnlyChange: (value: boolean) => void;
+  sortBy: string;
+  onSortChange: (value: string) => void;
   isLoading?: boolean;
 }
 
@@ -41,13 +48,133 @@ export function CategorySidebar({
   onSelectCategory,
   onAddCategory,
   onDeleteCategory,
+  onEditCategory,
+  onToggleActive,
+  activeOnly,
+  onActiveOnlyChange,
+  sortBy,
+  onSortChange,
   isLoading,
 }: CategorySidebarProps) {
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
+  const buttonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Handle button click - toggle menu
+  const handleMenuButtonClick = (categoryId: string, event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    
+    if (openMenuId === categoryId) {
+      // Close if already open
+      setOpenMenuId(null);
+      setMenuPosition(null);
+    } else {
+      // Open and calculate position
+      const button = event.currentTarget;
+      const rect = button.getBoundingClientRect();
+      
+      setMenuPosition({
+        top: rect.top,
+        left: rect.right + 8
+      });
+      setOpenMenuId(categoryId);
+    }
+  };
+
+  // Close menu on outside click
+  useEffect(() => {
+    if (!openMenuId) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      
+      // Check if click is outside menu
+      if (menuRef.current && !menuRef.current.contains(target)) {
+        // Check if click is outside button
+        const clickedButton = Array.from(buttonRefs.current.values()).find(btn => btn.contains(target));
+        if (!clickedButton) {
+          setOpenMenuId(null);
+          setMenuPosition(null);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openMenuId]);
+
+  // Close on ESC key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && openMenuId) {
+        setOpenMenuId(null);
+        setMenuPosition(null);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [openMenuId]);
+
+  // Filter and sort categories
+  const getFilteredAndSortedCategories = () => {
+    let filtered = categories.filter(cat => !activeOnly || cat.active);
+    
+    return filtered.sort((a, b) => {
+      switch(sortBy) {
+        case 'displayOrder':
+          return a.displayOrder - b.displayOrder;
+        case 'nameAsc':
+          return a.name.localeCompare(b.name);
+        case 'nameDesc':
+          return b.name.localeCompare(a.name);
+        case 'newest':
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        case 'oldest':
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        default:
+          return a.displayOrder - b.displayOrder;
+      }
+    });
+  };
+
+  const filteredCategories = getFilteredAndSortedCategories();
+
   return (
     <div className="hidden lg:flex w-64 bg-gray-50 border-r border-gray-200 flex-col">
       {/* Header */}
       <div className="p-6 border-b border-gray-200">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Categories</h3>
+        
+        {/* Active Only Filter */}
+        <div className="mb-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={activeOnly}
+              onChange={(e) => onActiveOnlyChange(e.target.checked)}
+              className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+            />
+            <span className="text-sm font-medium text-gray-700">Active Only</span>
+          </label>
+        </div>
+
+        {/* Sort Dropdown */}
+        <div className="mb-4">
+          <select
+            value={sortBy}
+            onChange={(e) => onSortChange(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          >
+            <option value="displayOrder">Display Order</option>
+            <option value="nameAsc">Name A-Z</option>
+            <option value="nameDesc">Name Z-A</option>
+            <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
+          </select>
+        </div>
+
         <button
           onClick={onAddCategory}
           className="w-full h-11 px-4 bg-emerald-500 hover:bg-emerald-600 hover:-translate-y-0.5 active:translate-y-0 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow-md"
@@ -85,37 +212,98 @@ export function CategorySidebar({
             </button>
 
             {/* Categories */}
-            {categories.map((category) => (
+            {filteredCategories.map((category) => (
               <div key={category.id} className="relative group">
                 <button
                   onClick={() => onSelectCategory(category.id)}
-                  className={`relative w-full px-4 py-3 rounded-lg text-left text-sm font-semibold transition-all ${
+                  className={`relative w-full px-4 py-3 rounded-lg text-left text-sm font-semibold transition-all pr-12 ${
                     selectedCategory === category.id
                       ? 'bg-emerald-100 text-emerald-700 border-l-4 border-emerald-500'
                       : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="truncate pr-2">{category.name}</span>
-                    <span className={`text-xs ${selectedCategory === category.id ? 'text-emerald-600' : 'text-gray-400'}`}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate flex-1">{category.name}</span>
+                    <span className={`text-xs shrink-0 ${selectedCategory === category.id ? 'text-emerald-600' : 'text-gray-400'}`}>
                       {category.itemCount || 0}
                     </span>
                   </div>
+                  {!category.active && (
+                    <Badge variant="secondary" className="mt-1 text-xs">Archived</Badge>
+                  )}
                 </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteCategory(category.id);
-                  }}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 bg-white hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                >
-                  <Trash2 className="w-4 h-4 text-gray-500 hover:text-red-500" />
-                </button>
+                
+                {/* Context Menu Button */}
+                <div className={`absolute right-2 top-1/2 -translate-y-1/2 transition-opacity ${
+                  openMenuId === category.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                }`}>
+                  <button
+                    ref={(el) => {
+                      if (el) buttonRefs.current.set(category.id, el);
+                      else buttonRefs.current.delete(category.id);
+                    }}
+                    onClick={(e) => handleMenuButtonClick(category.id, e)}
+                    className={`p-1.5 bg-white hover:bg-gray-50 rounded-lg shadow-sm ${
+                      openMenuId === category.id ? 'bg-gray-100' : ''
+                    }`}
+                    title="More actions"
+                  >
+                    <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 16 16">
+                      <circle cx="8" cy="3" r="1.5"/>
+                      <circle cx="8" cy="8" r="1.5"/>
+                      <circle cx="8" cy="13" r="1.5"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Context Menu Portal */}
+      {openMenuId && menuPosition && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-[9999] w-40 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden"
+          style={{
+            top: `${menuPosition.top}px`,
+            left: `${menuPosition.left}px`,
+          }}
+        >
+          {filteredCategories
+            .filter(cat => cat.id === openMenuId)
+            .map(category => (
+              <React.Fragment key={category.id}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEditCategory(category);
+                    setOpenMenuId(null);
+                    setMenuPosition(null);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  Edit
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleActive(category);
+                    setOpenMenuId(null);
+                    setMenuPosition(null);
+                  }}
+                  className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 transition-colors"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  {category.active ? 'Set Inactive' : 'Set Active'}
+                </button>
+              </React.Fragment>
+            ))}
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

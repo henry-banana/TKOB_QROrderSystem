@@ -318,28 +318,40 @@ export function MenuItemModal({
 // ============================================================================
 // ADD CATEGORY MODAL
 // ============================================================================
+// CATEGORY MODAL
+// ============================================================================
 
-interface AddCategoryModalProps {
+interface CategoryModalProps {
   isOpen: boolean;
+  mode: 'add' | 'edit';
   name: string;
   description: string;
+  displayOrder: string;
+  active: boolean;
   onClose: () => void;
   onSave: () => void;
   onNameChange: (name: string) => void;
   onDescriptionChange: (description: string) => void;
+  onDisplayOrderChange: (displayOrder: string) => void;
+  onActiveChange: (active: boolean) => void;
   isSaving?: boolean;
 }
 
-export function AddCategoryModal({
+export function CategoryModal({
   isOpen,
+  mode,
   name,
   description,
+  displayOrder,
+  active,
   onClose,
   onSave,
   onNameChange,
   onDescriptionChange,
+  onDisplayOrderChange,
+  onActiveChange,
   isSaving,
-}: AddCategoryModalProps) {
+}: CategoryModalProps) {
   if (!isOpen) return null;
 
   const isValid = name.trim();
@@ -359,7 +371,9 @@ export function AddCategoryModal({
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h3 className="text-xl font-bold text-gray-900">Add Category</h3>
+          <h3 className="text-xl font-bold text-gray-900">
+            {mode === 'add' ? 'Add Category' : 'Edit Category'}
+          </h3>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg">
             <X className="w-5 h-5 text-gray-400" />
           </button>
@@ -389,6 +403,43 @@ export function AddCategoryModal({
               rows={3}
             />
           </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-gray-900">Display Order</label>
+            <input
+              type="number"
+              value={displayOrder}
+              onChange={(e) => onDisplayOrderChange(e.target.value)}
+              placeholder="0"
+              min="0"
+              className="px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            />
+            <p className="text-xs text-gray-500">Lower numbers appear first in the list</p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-gray-900">Status</label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={active}
+                  onChange={() => onActiveChange(true)}
+                  className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm text-gray-700">Active</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={!active}
+                  onChange={() => onActiveChange(false)}
+                  className="w-4 h-4 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm text-gray-700">Inactive</span>
+              </label>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
@@ -404,13 +455,16 @@ export function AddCategoryModal({
             disabled={!isValid || isSaving}
             className="flex-1 px-4 py-3 bg-emerald-500 text-white rounded-lg text-sm font-semibold hover:bg-emerald-600 disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
-            {isSaving ? 'Creating...' : 'Create Category'}
+            {isSaving ? (mode === 'add' ? 'Creating...' : 'Updating...') : (mode === 'add' ? 'Create Category' : 'Update Category')}
           </button>
         </div>
       </div>
     </div>
   );
 }
+
+// Keep AddCategoryModal for backward compatibility
+export const AddCategoryModal = CategoryModal;
 
 // ============================================================================
 // DELETE CONFIRM MODAL

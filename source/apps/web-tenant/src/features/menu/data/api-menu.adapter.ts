@@ -5,6 +5,7 @@
 
 import {
   menuCategoryControllerFindAll,
+  menuCategoryControllerFindOne,
   menuCategoryControllerCreate,
   menuCategoryControllerUpdate,
   menuCategoryControllerDelete,
@@ -12,9 +13,11 @@ import {
 
 import {
   menuItemsControllerFindAll,
+  menuItemsControllerFindOne,
   menuItemsControllerCreate,
   menuItemsControllerUpdate,
   menuItemsControllerDelete,
+  menuItemsControllerToggleAvailability,
 } from '@/services/generated/menu-items/menu-items';
 
 import {
@@ -27,6 +30,10 @@ import {
 import {
   menuPhotoControllerUploadPhoto,
   menuPhotoControllerDeletePhoto,
+  menuPhotoControllerGetPhotos,
+  menuPhotoControllerSetPrimary,
+  menuPhotoControllerUploadPhotos,
+  menuPhotoControllerUpdateOrder,
 } from '@/services/generated/menu-photos/menu-photos';
 
 import type {
@@ -43,6 +50,7 @@ import type {
  */
 export const menuCategoriesApi = {
   findAll: menuCategoryControllerFindAll,
+  findOne: menuCategoryControllerFindOne,
   create: menuCategoryControllerCreate,
   update: menuCategoryControllerUpdate,
   delete: menuCategoryControllerDelete,
@@ -53,9 +61,11 @@ export const menuCategoriesApi = {
  */
 export const menuItemsApi = {
   findAll: menuItemsControllerFindAll,
+  findOne: menuItemsControllerFindOne,
   create: menuItemsControllerCreate,
   update: menuItemsControllerUpdate,
   delete: menuItemsControllerDelete,
+  toggleAvailability: menuItemsControllerToggleAvailability,
 };
 
 /**
@@ -72,8 +82,14 @@ export const modifiersApi = {
  * Menu Photos API
  */
 export const menuPhotosApi = {
-  upload: menuPhotoControllerUploadPhoto,
-  delete: menuPhotoControllerDeletePhoto,
+  upload: (itemId: string, data: { file: File }) =>
+    menuPhotoControllerUploadPhoto(itemId, data),
+  getPhotos: menuPhotoControllerGetPhotos,
+  delete: (itemId: string, photoId: string) =>
+    menuPhotoControllerDeletePhoto(itemId, photoId),
+  setPrimary: menuPhotoControllerSetPrimary,
+  bulkUpload: menuPhotoControllerUploadPhotos,
+  updateOrder: menuPhotoControllerUpdateOrder,
 };
 
 // Unified menu API

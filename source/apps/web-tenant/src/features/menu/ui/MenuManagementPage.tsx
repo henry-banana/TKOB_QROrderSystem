@@ -8,7 +8,6 @@ import type {
   CreateMenuCategoryDto, 
   UpdateMenuCategoryDto,
   CreateMenuItemDto,
-  UpdateMenuItemDto,
 } from '@/services/generated/models';
 
 // Import feature hooks
@@ -22,7 +21,13 @@ import {
   useUpdateMenuItem,
   useDeleteMenuItem,
   useUploadPhoto,
+  useDeletePhoto,
   useModifiers,
+  useMenuItem,
+  useCategory,
+  useToggleItemAvailability,
+  useSetPrimaryPhoto,
+  useItemPhotos,
 } from '../hooks';
 
 // Import extracted components
@@ -44,6 +49,7 @@ import type {
   MenuItemFormData,
   MenuFilters,
   ModalMode,
+  SortOption,
 } from '../types';
 import { INITIAL_MENU_ITEM_FORM } from '../constants';
 
@@ -66,15 +72,17 @@ export function MenuManagementPage() {
   const [categorySortBy, setCategorySortBy] = useState('displayOrder');
 
   // Filter state
-  const [filters, setFilters] = useState<MenuFilters>({
+  const [appliedFilters, setAppliedFilters] = useState<MenuFilters>({
     categoryId: 'all',
     status: 'All Status',
-    archiveStatus: 'all',
     sortBy: 'Sort by: Newest',
     searchQuery: '',
+    availability: 'all',
+    chefRecommended: false,
   });
+  const [tempFilters, setTempFilters] = useState<MenuFilters>(appliedFilters);
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [searchInputValue, setSearchInputValue] = useState(''); // Separate state for input display
-  const [tempArchiveStatus, setTempArchiveStatus] = useState<'all' | 'archived'>('all');
 
   // Item modal state
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -85,6 +93,10 @@ export function MenuManagementPage() {
   // Delete modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 12;
 
   // Toast notification
   const [showSuccessToast, setShowSuccessToast] = useState(false);
@@ -98,14 +110,59 @@ export function MenuManagementPage() {
     }
   }, [showSuccessToast]);
 
+  // Search debounce - 500ms
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAppliedFilters(prev => ({ ...prev, searchQuery: searchInputValue }));
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [searchInputValue]);
+
+  // ========== FILTER HANDLERS ==========
+  const handleTempFilterChange = (newFilters: Partial<MenuFilters>) => {
+    setTempFilters(prev => ({ ...prev, ...newFilters }));
+  };
+
+  const handleApplyFilters = () => {
+    setAppliedFilters(tempFilters);
+    setIsFilterDropdownOpen(false);
+  };
+
+  const handleResetFilters = () => {
+    const resetFilters: MenuFilters = {
+      categoryId: appliedFilters.categoryId, // Keep current category
+      status: 'All Status',
+      sortBy: appliedFilters.sortBy,         // Keep current sort
+      searchQuery: appliedFilters.searchQuery, // Keep search
+      availability: 'all',
+      chefRecommended: false,
+    };
+    setTempFilters(resetFilters);
+    setAppliedFilters(resetFilters);
+    setIsFilterDropdownOpen(false);
+  };
+
   // ========== API QUERIES ==========
   const { data: categoriesData } = useMenuCategories();
   const categories = categoriesData || [];
 
-  const { data: itemsData, isLoading: itemsLoading } = useMenuItems();
+  const { data: itemsData, isLoading: itemsLoading } = useMenuItems({
+    categoryId: appliedFilters.categoryId,
+    status: appliedFilters.status !== 'All Status' ? appliedFilters.status : undefined,
+    availability: appliedFilters.availability as 'available' | 'unavailable',
+    chefRecommended: appliedFilters.chefRecommended || undefined,
+    searchQuery: appliedFilters.searchQuery || undefined,
+    sortBy: appliedFilters.sortBy,
+    page: currentPage,
+    pageSize: ITEMS_PER_PAGE,
+  });
   const menuItems = Array.isArray(itemsData) 
     ? itemsData 
     : (itemsData as any)?.data || [];
+
+  console.log('[MenuManagementPage] Raw itemsData:', itemsData);
+  console.log('[MenuManagementPage] Parsed menuItems count:', menuItems.length);
 
   const { data: modifierGroupsData } = useModifiers({ activeOnly: false });
   const modifierGroups = modifierGroupsData || [];
@@ -209,9 +266,22 @@ export function MenuManagementPage() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: ['/api/v1/menu/item'] });
+        queryClient.invalidateQueries({ queryKey: ['menu', 'photos'] });
       },
       onError: (error: any) => {
         console.error('Error uploading photo:', error);
+      }
+    }
+  });
+
+  const deletePhotoMutation = useDeletePhoto({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ['/api/v1/menu/item'] });
+        queryClient.invalidateQueries({ queryKey: ['menu', 'photos'] });
+      },
+      onError: (error: any) => {
+        console.error('Error deleting photo:', error);
       }
     }
   });
@@ -227,41 +297,41 @@ export function MenuManagementPage() {
         // Category filter
         if (selectedCategory !== 'all' && item.categoryId !== selectedCategory) return false;
         
-        // Archive filter
-        if (filters.archiveStatus === 'archived') {
-          if (item.status !== 'ARCHIVED') return false;
-        } else {
-          if (item.status === 'ARCHIVED') return false;
-        }
-        
         // Search filter
-        if (filters.searchQuery.trim()) {
-          const query = filters.searchQuery.toLowerCase();
+        if (appliedFilters.searchQuery.trim()) {
+          const query = appliedFilters.searchQuery.toLowerCase();
           const matchName = item.name.toLowerCase().includes(query);
           const matchDesc = item.description?.toLowerCase().includes(query);
           if (!matchName && !matchDesc) return false;
         }
         
         // Status filter
-        if (filters.status !== 'All Status') {
+        if (appliedFilters.status !== 'All Status') {
           const statusMap: Record<string, string> = {
-            'Available': 'available',
-            'Unavailable': 'unavailable',
-            'Sold Out': 'sold_out',
+            'Draft': 'DRAFT',
+            'Published': 'PUBLISHED',
+            'Archived': 'ARCHIVED',
           };
-          const targetStatus = statusMap[filters.status];
-          const itemStatus = item.isAvailable 
-            ? 'available' 
-            : item.status === 'SOLD_OUT' 
-              ? 'sold_out' 
-              : 'unavailable';
-          if (itemStatus !== targetStatus) return false;
+          const targetStatus = statusMap[appliedFilters.status];
+          if (item.status !== targetStatus) return false;
+        }
+        
+        // Availability filter
+        if (appliedFilters.availability && appliedFilters.availability !== 'all') {
+          const isAvailable = item.isAvailable === true;
+          const targetAvailable = appliedFilters.availability === 'available';
+          if (isAvailable !== targetAvailable) return false;
+        }
+        
+        // Chef Recommended filter
+        if (appliedFilters.chefRecommended && !item.chefRecommended) {
+          return false;
         }
         
         return true;
       })
       .sort((a: any, b: any) => {
-        switch (filters.sortBy) {
+        switch (appliedFilters.sortBy) {
           case 'Sort by: Newest':
             return new Date((b as any).createdAt || 0).getTime() - new Date((a as any).createdAt || 0).getTime();
           case 'Popularity':
@@ -276,15 +346,28 @@ export function MenuManagementPage() {
       });
   };
 
-  const visibleMenuItems = getFilteredAndSortedItems();
+  const allFilteredAndSortedItems = getFilteredAndSortedItems();
+  const filteredItemsCount = allFilteredAndSortedItems.length;
+  const totalPages = Math.ceil(filteredItemsCount / ITEMS_PER_PAGE);
+  
+  console.log('[MenuManagementPage] After filter/sort, items count:', filteredItemsCount);
+  console.log('[MenuManagementPage] Total pages:', totalPages);
+  console.log('[MenuManagementPage] Current page:', currentPage);
+  
+  // Apply pagination to filtered and sorted items
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const visibleMenuItems = allFilteredAndSortedItems.slice(startIndex, endIndex);
+  
+  console.log('[MenuManagementPage] Visible items (page slice):', visibleMenuItems.length);
+  
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [appliedFilters, selectedCategory]);
 
   // ========== EVENT HANDLERS ==========
   // Category handlers
-  const handleSelectCategory = (categoryId: string) => {
-    setSelectedCategory(categoryId);
-    setFilters({ ...filters, categoryId });
-  };
-
   const handleOpenAddCategoryModal = () => {
     setCategoryModalMode('add');
     setEditingCategory(null);
@@ -357,7 +440,7 @@ export function MenuManagementPage() {
     setCurrentEditItemId(null);
     setItemFormData({
       ...INITIAL_MENU_ITEM_FORM,
-      category: selectedCategory,
+      categoryId: selectedCategory,
     });
     setIsItemModalOpen(true);
   };
@@ -367,13 +450,17 @@ export function MenuManagementPage() {
     setCurrentEditItemId(item.id);
     setItemFormData({
       name: item.name,
-      category: item.categoryId,
+      categoryId: item.categoryId,                           // Updated field name
       description: item.description || '',
-      price: item.price.toString(),
-      status: item.isAvailable ? 'available' : item.status === 'SOLD_OUT' ? 'sold_out' : 'unavailable',
-      image: null,
+      price: item.price,                                     // Number, not string
+      status: item.status,                                   // DRAFT/PUBLISHED/ARCHIVED
+      available: item.isAvailable,                           // Boolean availability
+      preparationTime: item.preparationTime || 0,            // Added field
+      allergens: item.allergens || [],                       // Added field
       dietary: item.dietary || [],
       chefRecommended: item.chefRecommended || false,
+      displayOrder: item.displayOrder || 0,                  // Added field
+      photos: [],                                            // Empty photos for edit (will be uploaded separately)
       modifierGroupIds: item.modifierGroups?.map(g => g.id) || [],
     });
     setIsItemModalOpen(true);
@@ -386,41 +473,116 @@ export function MenuManagementPage() {
   };
 
   const handleSaveItem = async () => {
-    if (!itemFormData.name.trim() || !itemFormData.price.trim()) return;
+    // Validation
+    if (!itemFormData.name.trim() || itemFormData.price <= 0 || !itemFormData.categoryId) {
+      setToastMessage('Please fill in all required fields');
+      setShowSuccessToast(true);
+      return;
+    }
+
+    // Validate preparation time range
+    if (itemFormData.preparationTime < 0 || itemFormData.preparationTime > 240) {
+      setToastMessage('Preparation time must be between 0 and 240 minutes');
+      setShowSuccessToast(true);
+      return;
+    }
 
     try {
       if (itemModalMode === 'add') {
+        // Step 1: Create item
         const result = await createItemMutation.mutateAsync({
           name: itemFormData.name,
-          categoryId: itemFormData.category,
+          categoryId: itemFormData.categoryId,              // Updated
           description: itemFormData.description || undefined,
-          price: parseFloat(itemFormData.price),
+          price: itemFormData.price,                        // Already number
+          status: itemFormData.status,                      // Publication status
+          preparationTime: itemFormData.preparationTime,    // Added
+          available: itemFormData.available,                // Added
+          allergens: itemFormData.allergens,                // Added
+          tags: itemFormData.dietary,                       // Map dietary to tags
+          chefRecommended: itemFormData.chefRecommended,
+          displayOrder: itemFormData.displayOrder,          // Added
           modifierGroupIds: itemFormData.modifierGroupIds,
         } as CreateMenuItemDto);
 
-        // Upload photo if exists
-        if (itemFormData.image && result?.id) {
-          await uploadPhotoMutation.mutateAsync(itemFormData.image);
+        // Step 2: Upload photos and delete marked photos in parallel
+        if (result?.id) {
+          const uploadPromises: Promise<any>[] = [];
+          const deletePromises: Promise<any>[] = [];
+
+          // Upload new photos
+          const newPhotos = itemFormData.photos.filter(p => p.file);
+          for (const photo of newPhotos) {
+            uploadPromises.push(
+              uploadPhotoMutation.mutateAsync({
+                itemId: result.id,
+                file: photo.file,
+              })
+            );
+          }
+
+          // Delete marked photos (if any)
+          for (const photoId of itemFormData.photosToDelete || []) {
+            deletePromises.push(
+              deletePhotoMutation.mutateAsync({
+                itemId: result.id,
+                photoId,
+              })
+            );
+          }
+
+          // Execute all in parallel
+          if (uploadPromises.length || deletePromises.length) {
+            await Promise.all([...uploadPromises, ...deletePromises]);
+          }
         }
 
         setToastMessage(`Món "${itemFormData.name}" đã được tạo`);
       } else if (currentEditItemId) {
-        await updateItemMutation.mutateAsync({
-          id: currentEditItemId,
-          data: {
-            name: itemFormData.name,
-            categoryId: itemFormData.category,
-            description: itemFormData.description || undefined,
-            price: parseFloat(itemFormData.price),
-            available: itemFormData.status === 'available',
-            modifierGroupIds: itemFormData.modifierGroupIds,
-          }
-        });
+        // Step 1: Update item (PATCH) - can be done in parallel
+        const updatePromises = [
+          updateItemMutation.mutateAsync({
+            id: currentEditItemId,
+            data: {
+              name: itemFormData.name,
+              categoryId: itemFormData.categoryId,            // Updated
+              description: itemFormData.description || undefined,
+              price: itemFormData.price,                      // Already number
+              status: itemFormData.status,                    // Publication status
+              preparationTime: itemFormData.preparationTime,  // Added
+              available: itemFormData.available,              // Added
+              allergens: itemFormData.allergens,              // Added
+              tags: itemFormData.dietary,                     // Map dietary to tags
+              chefRecommended: itemFormData.chefRecommended,
+              displayOrder: itemFormData.displayOrder,        // Added
+              modifierGroupIds: itemFormData.modifierGroupIds,
+            }
+          })
+        ];
 
-        // Upload photo if exists
-        if (itemFormData.image) {
-          await uploadPhotoMutation.mutateAsync(itemFormData.image);
+        // Step 2: Upload new photos in parallel
+        const newPhotos = itemFormData.photos.filter(p => p.file);
+        for (const photo of newPhotos) {
+          updatePromises.push(
+            uploadPhotoMutation.mutateAsync({
+              itemId: currentEditItemId,
+              file: photo.file,
+            })
+          );
         }
+
+        // Step 3: Delete marked photos in parallel
+        for (const photoId of itemFormData.photosToDelete || []) {
+          updatePromises.push(
+            deletePhotoMutation.mutateAsync({
+              itemId: currentEditItemId,
+              photoId,
+            })
+          );
+        }
+
+        // Execute all in parallel
+        await Promise.all(updatePromises);
 
         setToastMessage(`Món "${itemFormData.name}" đã được cập nhật`);
       }
@@ -429,12 +591,6 @@ export function MenuManagementPage() {
       handleCloseItemModal();
     } catch (error) {
       console.error('Error in handleSaveItem:', error);
-    }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setItemFormData({ ...itemFormData, image: e.target.files[0] });
     }
   };
 
@@ -457,27 +613,21 @@ export function MenuManagementPage() {
 
   // Filter handlers
   const handleSearchChange = (query: string) => {
-    setSearchInputValue(query); // Only update display, don't filter yet
+    setSearchInputValue(query); // Only update display
   };
 
   const handleSearchSubmit = () => {
-    setFilters({ ...filters, searchQuery: searchInputValue }); // Apply filter on Enter
-  };
-
-  const handleStatusChange = (status: string) => {
-    setFilters({ ...filters, status });
+    // Apply search with debounce handled in separate useEffect
+    setAppliedFilters({ ...appliedFilters, searchQuery: searchInputValue });
   };
 
   const handleSortChange = (sortBy: string) => {
-    setFilters({ ...filters, sortBy: sortBy as any });
+    setAppliedFilters({ ...appliedFilters, sortBy: sortBy as any });
   };
 
-  const handleArchiveStatusChange = (status: 'all' | 'archived') => {
-    setTempArchiveStatus(status);
-  };
-
-  const handleApplyArchiveFilter = () => {
-    setFilters({ ...filters, archiveStatus: tempArchiveStatus });
+  const handleSelectCategory = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setAppliedFilters({ ...appliedFilters, categoryId });
   };
 
   // Toggle item availability
@@ -529,18 +679,22 @@ export function MenuManagementPage() {
         {/* Toolbar */}
         <MenuToolbar
           searchQuery={searchInputValue}
-          selectedStatus={filters.status}
-          sortOption={filters.sortBy}
-          archiveStatus={filters.archiveStatus}
-          tempArchiveStatus={tempArchiveStatus}
           onSearchChange={handleSearchChange}
           onSearchSubmit={handleSearchSubmit}
-          onStatusChange={handleStatusChange}
+          
+          isFilterDropdownOpen={isFilterDropdownOpen}
+          appliedFilters={appliedFilters}
+          tempFilters={tempFilters}
+          onFilterDropdownToggle={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
+          onTempFilterChange={handleTempFilterChange}
+          onApplyFilters={handleApplyFilters}
+          onResetFilters={handleResetFilters}
+          onCloseFilterDropdown={() => setIsFilterDropdownOpen(false)}
+          
+          sortOption={appliedFilters.sortBy as SortOption}
           onSortChange={handleSortChange}
-          onArchiveStatusChange={handleArchiveStatusChange}
-          onTempArchiveStatusChange={handleArchiveStatusChange}
-          onApplyArchiveFilter={handleApplyArchiveFilter}
           onAddItem={handleOpenAddItemModal}
+          
           // Mobile category props
           categories={categories.map((cat: any) => ({ id: cat.id, name: cat.name }))}
           selectedCategory={selectedCategory}
@@ -599,8 +753,48 @@ export function MenuManagementPage() {
             onToggleAvailability={handleToggleAvailability}
             onAddItem={handleOpenAddItemModal}
             isLoading={itemsLoading}
-            searchQuery={filters.searchQuery}
+            searchQuery={appliedFilters.searchQuery}
           />
+
+          {/* Pagination Controls */}
+          {filteredItemsCount > 0 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t border-[rgb(var(--border))]">
+              <div className="text-sm text-[rgb(var(--neutral-600))]">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredItemsCount)} of {filteredItemsCount} items
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 border border-[rgb(var(--border))] rounded-lg text-sm font-medium text-[rgb(var(--neutral-700))] hover:bg-[rgb(var(--primary-100))] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                        currentPage === page
+                          ? 'bg-emerald-500 text-white'
+                          : 'border border-[rgb(var(--border))] text-[rgb(var(--neutral-700))] hover:bg-[rgb(var(--primary-100))]'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 border border-[rgb(var(--border))] rounded-lg text-sm font-medium text-[rgb(var(--neutral-700))] hover:bg-[rgb(var(--primary-100))] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -608,18 +802,19 @@ export function MenuManagementPage() {
       <MenuItemModal
         isOpen={isItemModalOpen}
         mode={itemModalMode}
+        itemId={currentEditItemId || undefined}
         formData={itemFormData}
         categories={categories as any}
         modifierGroups={modifierGroups}
         onClose={handleCloseItemModal}
         onSave={handleSaveItem}
         onFormChange={setItemFormData}
-        onImageUpload={handleImageUpload}
       />
 
       <CategoryModal
         isOpen={isCategoryModalOpen}
         mode={categoryModalMode}
+        categoryId={editingCategory?.id}
         name={newCategoryName}
         description={newCategoryDescription}
         displayOrder={newCategoryDisplayOrder}

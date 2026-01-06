@@ -17,11 +17,13 @@ import {
   Leaf,
   Flame,
   ChevronDown,
-  Check
+  Check,
+  X
 } from 'lucide-react';
 import { Badge, Select } from '@/shared/components';
-import { STATUS_FILTER_OPTIONS, SORT_OPTIONS, ARCHIVE_STATUS_OPTIONS } from '../constants';
-import type { Category, SortOption, DietaryTag } from '../types';
+import { STATUS_FILTER_OPTIONS, SORT_OPTIONS } from '../constants';
+import type { Category, SortOption, DietaryTag, MenuFilters, MenuItem } from '../types';
+import { getPrimaryPhotoUrl } from '../model/types';
 
 // ============================================================================
 // CATEGORY SIDEBAR
@@ -144,48 +146,44 @@ export function CategorySidebar({
   return (
     <aside className="hidden lg:flex w-64 h-full bg-gray-50 border-r border-gray-200 flex-col min-h-0 overflow-hidden">
       {/* Header - Fixed */}
-      <div className="shrink-0 p-6 border-b border-gray-200">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Categories</h3>
-        
-        {/* Active Only Filter */}
-        <div className="mb-3">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={activeOnly}
-              onChange={(e) => onActiveOnlyChange(e.target.checked)}
-              className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
-            />
-            <span className="text-sm font-medium text-gray-700">Active Only</span>
-          </label>
-        </div>
-
-        {/* Sort Dropdown */}
-        <div className="mb-4">
-          <select
-            value={sortBy}
-            onChange={(e) => onSortChange(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-          >
-            <option value="displayOrder">Display Order</option>
-            <option value="nameAsc">Name A-Z</option>
-            <option value="nameDesc">Name Z-A</option>
-            <option value="newest">Newest First</option>
-            <option value="oldest">Oldest First</option>
-          </select>
-        </div>
-
+      <div className="shrink-0 px-4 py-2 border-b border-gray-200">
+        <h3 className="text-gray-900 mb-2" style={{ fontSize: '15px', fontWeight: 700 }}>Categories</h3>
         <button
           onClick={onAddCategory}
-          className="w-full h-11 px-4 bg-emerald-500 hover:bg-emerald-600 hover:-translate-y-0.5 active:translate-y-0 text-white rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow-md"
+          className="w-full flex items-center justify-center gap-2 px-3 py-1.5 border border-dashed border-gray-300 text-gray-700 hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-600 transition-all"
+          style={{ fontSize: '13px', fontWeight: 600, borderRadius: '10px' }}
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4" />
           Add Category
         </button>
       </div>
 
+      {/* Sort Control + Active Only Filter (merged) */}
+      <div className="shrink-0 px-4 py-1.5 border-b border-gray-200 flex items-center gap-2">
+        <select
+          value={sortBy}
+          onChange={(e) => onSortChange(e.target.value)}
+          className="flex-1 text-xs border border-gray-300 rounded-lg px-2 py-1 focus:outline-none focus:border-emerald-500"
+        >
+          <option value="displayOrder">Display Order</option>
+          <option value="nameAsc">Name A-Z</option>
+          <option value="nameDesc">Name Z-A</option>
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+        </select>
+        <label className="flex items-center gap-1.5 shrink-0 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={activeOnly}
+            onChange={(e) => onActiveOnlyChange(e.target.checked)}
+            className="w-3.5 h-3.5 rounded border-gray-300 text-emerald-600 cursor-pointer"
+          />
+          <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">Active</span>
+        </label>
+      </div>
+
       {/* Category List - Scrollable */}
-      <div className="flex-1 overflow-y-auto p-4 pr-2 min-h-0">{isLoading ? (
+      <div className="flex-1 overflow-y-auto pt-1 pb-2 px-2 min-h-0">{isLoading ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-12 bg-gray-200 rounded-lg animate-pulse" />
@@ -222,7 +220,7 @@ export function CategorySidebar({
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="truncate flex-1">{category.name}</span>
+                    <span className="truncate flex-1">#{category.displayOrder} {category.name}</span>
                     <span className={`text-xs shrink-0 ${selectedCategory === category.id ? 'text-emerald-600' : 'text-gray-400'}`}>
                       {category.itemCount || 0}
                     </span>
@@ -313,18 +311,25 @@ export function CategorySidebar({
 
 interface MenuToolbarProps {
   searchQuery: string;
-  selectedStatus: string;
-  sortOption: SortOption;
-  archiveStatus: 'all' | 'archived';
-  tempArchiveStatus: 'all' | 'archived';
   onSearchChange: (query: string) => void;
-  onSearchSubmit?: () => void; // Trigger filter on Enter
-  onStatusChange: (status: string) => void;
+  onSearchSubmit?: () => void;
+  
+  // Filter dropdown props
+  isFilterDropdownOpen: boolean;
+  appliedFilters: MenuFilters;
+  tempFilters: MenuFilters;
+  onFilterDropdownToggle: () => void;
+  onTempFilterChange: (filters: Partial<MenuFilters>) => void;
+  onApplyFilters: () => void;
+  onResetFilters: () => void;
+  onCloseFilterDropdown: () => void;
+  
+  // Sort
+  sortOption: SortOption;
   onSortChange: (sort: SortOption) => void;
-  onArchiveStatusChange: (status: 'all' | 'archived') => void;
-  onTempArchiveStatusChange: (status: 'all' | 'archived') => void;
-  onApplyArchiveFilter: () => void;
+  
   onAddItem: () => void;
+  
   // Mobile category selector
   categories?: Array<{ id: string; name: string }>;
   selectedCategory?: string;
@@ -334,17 +339,18 @@ interface MenuToolbarProps {
 
 export function MenuToolbar({
   searchQuery,
-  selectedStatus,
-  sortOption,
-  archiveStatus,
-  tempArchiveStatus,
   onSearchChange,
   onSearchSubmit,
-  onStatusChange,
+  isFilterDropdownOpen,
+  appliedFilters,
+  tempFilters,
+  onFilterDropdownToggle,
+  onTempFilterChange,
+  onApplyFilters,
+  onResetFilters,
+  onCloseFilterDropdown,
+  sortOption,
   onSortChange,
-  onArchiveStatusChange,
-  onTempArchiveStatusChange,
-  onApplyArchiveFilter,
   onAddItem,
   // Mobile category props
   categories,
@@ -393,7 +399,7 @@ export function MenuToolbar({
                   onSearchSubmit();
                 }
               }}
-              placeholder="Search menu items... (Press Enter to search)"
+              placeholder="Search menu items... (Auto-search)"
               className="w-full pl-10 pr-4 py-2.5 bg-elevated border border-default rounded-lg text-sm text-text-primary placeholder:text-text-tertiary transition-all hover:border-hover focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
             />
           </div>
@@ -402,17 +408,17 @@ export function MenuToolbar({
         {/* Filters - Responsive wrap */}
         <div className="flex flex-wrap items-center gap-2 lg:gap-3">
           {/* Status Filter */}
-          <select
-            value={selectedStatus}
-            onChange={(e) => onStatusChange(e.target.value)}
-            className="flex-1 min-w-[120px] sm:flex-none px-3 lg:px-4 py-2.5 bg-elevated border border-default rounded-lg text-sm font-medium text-text-primary cursor-pointer transition-all hover:border-hover focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/20"
-          >
-            {STATUS_FILTER_OPTIONS.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+          {/* Filter Dropdown - Combined filters (Status, Availability, Chef Recommended) */}
+          <MenuItemFilterDropdown
+            isOpen={isFilterDropdownOpen}
+            appliedFilters={appliedFilters}
+            tempFilters={tempFilters}
+            onTempFilterChange={onTempFilterChange}
+            onApplyFilters={onApplyFilters}
+            onResetFilters={onResetFilters}
+            onClose={onCloseFilterDropdown}
+            onToggle={onFilterDropdownToggle}
+          />
 
           {/* Sort - Hidden on small mobile */}
           <div className="hidden sm:block">
@@ -425,16 +431,6 @@ export function MenuToolbar({
               onChange={(value) => onSortChange(value as SortOption)}
               size="md"
               triggerClassName="min-w-[180px]"
-            />
-          </div>
-
-          {/* Archive Filter Dropdown - Hidden on mobile */}
-          <div className="hidden md:block relative">
-            <ArchiveFilterDropdown
-              archiveStatus={archiveStatus}
-              tempArchiveStatus={tempArchiveStatus}
-              onTempArchiveStatusChange={onTempArchiveStatusChange}
-              onApplyArchiveFilter={onApplyArchiveFilter}
             />
           </div>
 
@@ -498,13 +494,16 @@ export function MenuItemCard({ item, onEdit, onDelete, onToggleAvailability }: M
 
   const isAvailable = displayStatus === 'available';
   
+  // Get primary photo URL with fallback
+  const primaryPhotoUrl = getPrimaryPhotoUrl(item);
+  
   return (
-    <div className="bg-white rounded-lg border border-[rgb(var(--border))] shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group">
+    <div className="bg-white rounded-lg border border-[rgb(var(--border))] shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group flex flex-col h-full">
       {/* Image Container với Status Badge */}
       <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-[rgb(var(--primary-100))] to-[rgb(var(--neutral-100))] overflow-hidden">
-        {item.imageUrl ? (
+        {primaryPhotoUrl ? (
           <img 
-            src={item.imageUrl} 
+            src={primaryPhotoUrl} 
             alt={item.name} 
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
           />
@@ -515,11 +514,33 @@ export function MenuItemCard({ item, onEdit, onDelete, onToggleAvailability }: M
           </div>
         )}
         
-        {/* Status Badge - Top Right Corner */}
+        {/* Publication Status Badge - Top Left Corner */}
+        {(() => {
+          const status = item.status || 'DRAFT';
+          const statusClasses = 
+            status === 'PUBLISHED'
+              ? 'bg-emerald-500 text-white'
+              : status === 'DRAFT'
+              ? 'bg-amber-500 text-white'
+              : 'bg-gray-500 text-white';
+          const statusText =
+            status === 'PUBLISHED'
+              ? 'Published'
+              : status === 'DRAFT'
+              ? 'Draft'
+              : 'Archived';
+          return (
+            <div className={`absolute top-3 left-3 px-3 py-1 rounded-md text-[11px] font-semibold ${statusClasses}`}>
+              {statusText}
+            </div>
+          );
+        })()}
+        
+        {/* Availability Badge - Top Right Corner */}
         <div className={`
           absolute top-3 right-3
           px-3 py-1 rounded-md
-          text-[11px] font-semibold uppercase tracking-wide
+          text-[11px] font-semibold
           ${isAvailable 
             ? 'bg-[rgb(var(--success))] text-white' 
             : displayStatus === 'sold_out'
@@ -532,17 +553,17 @@ export function MenuItemCard({ item, onEdit, onDelete, onToggleAvailability }: M
       </div>
 
       {/* Content */}
-      <div className="p-4">
-        {/* Title */}
+      <div className="p-4 flex flex-col flex-1">
+        {/* Title - Full Width */}
         <h4 className="text-lg font-semibold text-[rgb(var(--neutral-900))] line-clamp-1 mb-1">
           {item.name}
         </h4>
         
-        {/* Category */}
+        {/* Category Badge */}
         {item.categoryName && (
-          <p className="text-[13px] text-[rgb(var(--neutral-500))] mb-2">
+          <span className="inline-block px-2 py-0.5 mb-2 bg-blue-100 text-blue-700 rounded text-xs font-medium">
             {item.categoryName}
-          </p>
+          </span>
         )}
 
         {/* Description */}
@@ -580,8 +601,8 @@ export function MenuItemCard({ item, onEdit, onDelete, onToggleAvailability }: M
           )}
         </div>
 
-        {/* Dietary Tags - Compact */}
-        {((item.chefRecommended) || (item.dietary && item.dietary.length > 0)) && (
+        {/* Dietary Tags + Display Order - Compact */}
+        {((item.chefRecommended) || (item.dietary && item.dietary.length > 0) || (item.displayOrder !== undefined)) && (
           <div className="flex flex-wrap gap-1.5 mb-4">
             {item.chefRecommended && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-[rgb(var(--primary-100))] text-[rgb(var(--primary-700))] rounded-md text-xs font-medium">
@@ -602,11 +623,16 @@ export function MenuItemCard({ item, onEdit, onDelete, onToggleAvailability }: M
                 <span className="capitalize">{tag}</span>
               </span>
             ))}
+            {item.displayOrder !== undefined && (
+              <span className="inline-flex items-center justify-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full whitespace-nowrap bg-purple-50 text-purple-600 border border-purple-200">
+                Order #{item.displayOrder}
+              </span>
+            )}
           </div>
         )}
 
         {/* Action Buttons Row */}
-        <div className="flex items-center gap-2 pt-3 border-t border-[rgb(var(--border))]">
+        <div className="flex items-center gap-2 pt-3 border-t border-[rgb(var(--border))] mt-auto">
           {/* Edit Button */}
           <button
             onClick={(e) => {
@@ -625,7 +651,7 @@ export function MenuItemCard({ item, onEdit, onDelete, onToggleAvailability }: M
               e.stopPropagation();
               onDelete(item);
             }}
-            className="h-9 w-9 bg-[rgb(var(--neutral-100))] hover:bg-[rgb(var(--error-100))] border border-[rgb(var(--border))] hover:border-[rgb(var(--error-200))] rounded-lg flex items-center justify-center text-[rgb(var(--neutral-600))] hover:text-[rgb(var(--error-600))] transition-colors"
+            className="w-9 h-9 bg-[rgb(var(--neutral-100))] hover:bg-[rgb(var(--error-100))] border border-[rgb(var(--border))] hover:border-[rgb(var(--error-200))] rounded-lg flex items-center justify-center text-[rgb(var(--neutral-600))] hover:text-[rgb(var(--error-600))] transition-colors"
             title="Delete"
           >
             <Trash2 className="w-4 h-4" />
@@ -682,7 +708,7 @@ export function MenuItemGrid({
 }: MenuItemGridProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
         {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
           <div key={i} className="bg-[rgb(var(--neutral-100))] rounded-lg animate-pulse" style={{ aspectRatio: '3/4' }} />
         ))}
@@ -716,7 +742,7 @@ export function MenuItemGrid({
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
       {items.map((item) => (
         <MenuItemCard
           key={item.id}
@@ -729,37 +755,48 @@ export function MenuItemGrid({
     </div>
   );
 }
+
 // ============================================================================
-// ARCHIVE FILTER DROPDOWN (Click to toggle, not hover)
+// MENU ITEM FILTER DROPDOWN (Combined filters: Status, Availability, Chef Recommended)
 // ============================================================================
 
-interface ArchiveFilterDropdownProps {
-  archiveStatus: 'all' | 'archived';
-  tempArchiveStatus: 'all' | 'archived';
-  onTempArchiveStatusChange: (status: 'all' | 'archived') => void;
-  onApplyArchiveFilter: () => void;
+interface MenuItemFilterDropdownProps {
+  isOpen: boolean;
+  appliedFilters: MenuFilters;
+  tempFilters: MenuFilters;
+  onTempFilterChange: (filters: Partial<MenuFilters>) => void;
+  onApplyFilters: () => void;
+  onResetFilters: () => void;
+  onClose: () => void;
+  onToggle: () => void;
 }
 
-function ArchiveFilterDropdown({
-  archiveStatus,
-  tempArchiveStatus,
-  onTempArchiveStatusChange,
-  onApplyArchiveFilter,
-}: ArchiveFilterDropdownProps) {
-  const [isOpen, setIsOpen] = useState(false);
-
+function MenuItemFilterDropdown({
+  isOpen,
+  appliedFilters,
+  tempFilters,
+  onTempFilterChange,
+  onApplyFilters,
+  onResetFilters,
+  onClose,
+  onToggle,
+}: MenuItemFilterDropdownProps) {
   const handleApply = () => {
-    onApplyArchiveFilter();
-    setIsOpen(false);
+    onApplyFilters();
+  };
+
+  const handleReset = () => {
+    onResetFilters();
   };
 
   return (
     <div className="relative">
+      {/* Filter Button */}
       <button 
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={onToggle}
         className="px-4 py-2.5 bg-white border border-[rgb(var(--border))] rounded-lg text-sm font-medium text-text-primary hover:border-[rgb(var(--primary-400))] transition-all flex items-center gap-2"
       >
-        <span>{archiveStatus === 'all' ? 'Active' : 'Archived'}</span>
+        <span>Filter</span>
         <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
       
@@ -769,35 +806,106 @@ function ArchiveFilterDropdown({
           {/* Backdrop */}
           <div 
             className="fixed inset-0 z-40" 
-            onClick={() => setIsOpen(false)}
+            onClick={onClose}
           />
           {/* Menu */}
-          <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-[rgb(var(--border))] z-50 animate-in fade-in-0 zoom-in-95 duration-150">
-            <div className="p-4 space-y-3">
-              <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider">Show</p>
-              {ARCHIVE_STATUS_OPTIONS.map((option) => (
-                <label 
-                  key={option.value} 
-                  className="flex items-center gap-3 cursor-pointer group/radio p-2 rounded-lg hover:bg-[rgb(var(--primary-50))] transition-colors"
+          <div className="absolute left-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-[rgb(var(--border))] z-50 animate-in fade-in-0 zoom-in-95 duration-150 max-h-[480px] overflow-y-auto">
+            <div className="p-3 space-y-3">
+              {/* Header with Close Button */}
+              <div className="flex items-center justify-between pb-2 border-b border-gray-200 sticky top-0 bg-white">
+                <h3 className="text-sm font-semibold text-gray-900">Filters</h3>
+                <button 
+                  onClick={onClose}
+                  className="p-1 hover:bg-gray-100 rounded-lg transition-colors"
                 >
-                  <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                    tempArchiveStatus === option.value 
-                      ? 'border-[rgb(var(--primary))] bg-[rgb(var(--primary))]' 
-                      : 'border-gray-300'
-                  }`}>
-                    {tempArchiveStatus === option.value && (
-                      <Check className="w-3 h-3 text-white" />
-                    )}
-                  </div>
-                  <span className="text-sm font-medium text-text-primary">{option.label}</span>
+                  <X className="w-4 h-4 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Status Section */}
+              <div>
+                <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1.5">Status</p>
+                <div className="space-y-1">
+                  {['All Status', 'Draft', 'Published', 'Archived'].map((option) => (
+                    <label 
+                      key={option}
+                      className="flex items-center gap-3 cursor-pointer group/radio px-2 py-1 rounded-lg hover:bg-[rgb(var(--primary-50))] transition-colors"
+                      onClick={() => onTempFilterChange({ status: option })}
+                    >
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                        tempFilters.status === option
+                          ? 'border-[rgb(var(--primary))] bg-[rgb(var(--primary))]'
+                          : 'border-gray-300'
+                      }`}>
+                        {tempFilters.status === option && (
+                          <Check className="w-3 h-3 text-white" />
+                        )}
+                      </div>
+                      <span className="text-sm font-medium text-text-primary">{option}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Availability Section */}
+              <div>
+                <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1.5">Availability</p>
+                <div className="space-y-1">
+                  {[
+                    { value: 'all', label: 'All Items' },
+                    { value: 'available', label: 'Available' },
+                    { value: 'unavailable', label: 'Unavailable' },
+                  ].map((option) => (
+                    <label 
+                      key={option.value}
+                      className="flex items-center gap-3 cursor-pointer group/radio px-2 py-1 rounded-lg hover:bg-[rgb(var(--primary-50))] transition-colors"
+                      onClick={() => onTempFilterChange({ availability: option.value as 'all' | 'available' | 'unavailable' })}
+                    >
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                        tempFilters.availability === option.value
+                          ? 'border-[rgb(var(--primary))] bg-[rgb(var(--primary))]'
+                          : 'border-gray-300'
+                      }`}>
+                        {tempFilters.availability === option.value && (
+                          <Check className="w-3 h-3 text-white" />
+                        )}
+                      </div>
+                      <span className="text-sm font-medium text-text-primary">{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+
+              {/* Chef Recommended Checkbox */}
+              <div className="pb-3">
+                <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-1.5">Special</p>
+                <label className="flex items-center gap-3 cursor-pointer px-2 py-1 rounded-lg hover:bg-[rgb(var(--primary-50))] transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={tempFilters.chefRecommended || false}
+                    onChange={(e) => onTempFilterChange({ chefRecommended: e.target.checked })}
+                    className="w-5 h-5 text-[rgb(var(--primary))] rounded border-gray-300 cursor-pointer"
+                  />
+                  <span className="text-sm font-medium text-text-primary">Chef Recommended Only</span>
                 </label>
-              ))}
-              <button
-                onClick={handleApply}
-                className="w-full mt-3 h-10 px-4 bg-[rgb(var(--primary))] hover:bg-[rgb(var(--primary-600))] text-white rounded-lg text-sm font-semibold shadow-sm hover:shadow-md transition-all"
-              >
-                Apply Filter
-              </button>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-1.5 border-t border-gray-200 sticky bottom-0 bg-white">
+                <button
+                  onClick={handleReset}
+                  className="flex-1 h-10 px-4 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Reset
+                </button>
+                <button
+                  onClick={handleApply}
+                  className="flex-1 h-10 px-4 bg-[rgb(var(--primary))] hover:bg-[rgb(var(--primary-600))] text-white rounded-lg text-sm font-semibold shadow-sm hover:shadow-md transition-all"
+                >
+                  Apply Filter
+                </button>
+              </div>
             </div>
           </div>
         </>

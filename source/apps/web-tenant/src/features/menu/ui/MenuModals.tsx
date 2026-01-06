@@ -4,10 +4,11 @@
  * Modal component for creating and editing menu items
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X, Upload, Image as ImageIcon } from 'lucide-react';
-import { DIETARY_TAG_OPTIONS } from '../constants';
-import type { MenuItemFormData, ModalMode, Category, ModifierGroup, DietaryTag } from '../types';
+import { DIETARY_TAG_OPTIONS, ALLERGEN_OPTIONS, STATUS_OPTIONS } from '../constants';
+import type { MenuItemFormData, ModalMode, Category, ModifierGroup, DietaryTag, Allergen, MenuItemStatus } from '../types';
+import { useItemPhotos, useSetPrimaryPhoto, useCategory } from '../hooks';
 
 // ============================================================================
 // MENU ITEM MODAL
@@ -16,35 +17,69 @@ import type { MenuItemFormData, ModalMode, Category, ModifierGroup, DietaryTag }
 interface MenuItemModalProps {
   isOpen: boolean;
   mode: ModalMode;
+  itemId?: string;
   formData: MenuItemFormData;
   categories: Category[];
   modifierGroups: ModifierGroup[];
   onClose: () => void;
   onSave: () => void;
   onFormChange: (data: MenuItemFormData) => void;
-  onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isSaving?: boolean;
 }
 
 export function MenuItemModal({
   isOpen,
   mode,
+  itemId,
   formData,
   categories,
   modifierGroups,
   onClose,
   onSave,
   onFormChange,
-  onImageUpload,
   isSaving,
 }: MenuItemModalProps) {
   if (!isOpen) return null;
+
+  // Load existing photos when editing
+  const { data: existingPhotos = [] } = useItemPhotos(itemId || '', {
+    enabled: mode === 'edit' && !!itemId
+  });
+
+  // Handle set primary on existing photo
+  const setPhotoMutation = useSetPrimaryPhoto();
+
+  const handleSetPrimaryPhoto = async (photoId: string) => {
+    if (!itemId) return;
+    await setPhotoMutation.mutateAsync({
+      itemId,
+      photoId,
+    });
+  };
+
+  const handleDeleteExistingPhoto = (photoId: string) => {
+    // Optimistic UI: hide photo, track for delete on save
+    const photosToDelete = formData.photosToDelete || [];
+    if (!photosToDelete.includes(photoId)) {
+      onFormChange({
+        ...formData,
+        photosToDelete: [...photosToDelete, photoId]
+      });
+    }
+  };
 
   const toggleDietary = (tag: DietaryTag) => {
     const newDietary = formData.dietary.includes(tag)
       ? formData.dietary.filter((t) => t !== tag)
       : [...formData.dietary, tag];
     onFormChange({ ...formData, dietary: newDietary });
+  };
+
+  const toggleAllergen = (allergen: Allergen) => {
+    const newAllergens = formData.allergens.includes(allergen)
+      ? formData.allergens.filter((a) => a !== allergen)
+      : [...formData.allergens, allergen];
+    onFormChange({ ...formData, allergens: newAllergens });
   };
 
   const toggleModifierGroup = (groupId: string) => {
@@ -55,21 +90,13 @@ export function MenuItemModal({
     onFormChange({ ...formData, modifierGroupIds: newIds });
   };
 
-  const isValid = formData.name.trim() && formData.price.trim() && formData.category;
+  const isValid = formData.name.trim() && formData.price > 0 && formData.categoryId;
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center z-50"
-      style={{
-        backgroundColor: 'rgba(255, 255, 255, 0.4)',
-        backdropFilter: 'blur(16px)',
-      }}
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div
         className="bg-white w-full mx-4 rounded-lg shadow-2xl overflow-hidden flex flex-col"
         style={{ maxWidth: '560px', maxHeight: 'calc(100vh - 80px)' }}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -83,43 +110,172 @@ export function MenuItemModal({
 
         {/* Form */}
         <div className="p-6 flex flex-col gap-5 overflow-y-auto">
-          {/* Image Upload */}
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-gray-900">Item Image</label>
+          {/* EXISTING PHOTOS SECTION (Edit Mode) */}
+          {mode === 'edit' && existingPhotos.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-gray-900">Existing Photos</label>
+              <div className="space-y-2">
+                {existingPhotos
+                  .filter(p => !formData.photosToDelete?.includes(p.id))
+                  .map((photo) => (
+                  <div
+                    key={photo.id}
+                    className={`border-2 rounded-lg p-3 flex items-start gap-3 transition-colors ${
+                      photo.isPrimary
+                        ? 'border-emerald-500 bg-emerald-50'
+                        : 'border-gray-200 bg-gray-50'
+                    }`}
+                  >
+                    {/* Photo Thumbnail */}
+                    <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <ImageIcon className="w-8 h-8 text-gray-400" />
+                    </div>
 
-            {formData.image ? (
-              <div className="border-2 border-emerald-500 rounded-lg p-6 flex flex-col items-center gap-3 bg-emerald-50">
-                <div className="w-24 h-24 bg-white rounded-lg flex items-center justify-center">
-                  <ImageIcon className="w-12 h-12 text-emerald-500" />
-                </div>
-                <p className="text-sm font-semibold text-emerald-700">{formData.image.name}</p>
-                <p className="text-xs text-emerald-600">
-                  {(formData.image.size / 1024).toFixed(1)} KB
-                </p>
-                <button
-                  onClick={() => onFormChange({ ...formData, image: null })}
-                  className="text-sm font-semibold text-emerald-600 hover:text-emerald-700"
-                >
-                  Remove image
-                </button>
+                    {/* Photo Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{photo.filename}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-gray-500">{(photo.size / 1024).toFixed(1)} KB</p>
+                        {photo.isPrimary && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-500 text-white">
+                            Primary
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 flex-shrink-0">
+                      {!photo.isPrimary && (
+                        <button
+                          onClick={() => handleSetPrimaryPhoto(photo.id)}
+                          className="text-xs font-semibold text-emerald-600 bg-emerald-100 hover:bg-emerald-200 px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          Set Primary
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDeleteExistingPhoto(photo.id)}
+                        className="text-xs font-semibold text-red-600 hover:text-red-700 px-2 py-1 hover:bg-red-100 rounded transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <label className="border-2 border-dashed border-gray-300 rounded-lg p-8 flex flex-col items-center gap-3 cursor-pointer hover:border-emerald-500">
-                <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                  <Upload className="w-8 h-8 text-gray-400" />
-                </div>
-                <p className="text-sm font-semibold text-gray-900">
-                  Drop image or click to upload
-                </p>
-                <p className="text-xs text-gray-500">PNG, JPG or WEBP (max. 5MB)</p>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={onImageUpload}
-                  className="hidden"
-                />
-              </label>
+            </div>
+          )}
+
+          {/* NEW PHOTOS SECTION */}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-gray-900">
+              {mode === 'edit' ? 'Add More Photos' : 'Item Photos'}
+            </label>
+            
+            {/* Info Message */}
+            {mode === 'add' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex gap-2">
+                <span className="text-blue-600 text-lg">💡</span>
+                <p className="text-sm text-blue-700">Photos will be uploaded after the item is created</p>
+              </div>
             )}
+
+            {/* New Photos List */}
+            {formData.photos.length > 0 && (
+              <div className="space-y-2 mb-3">
+                {formData.photos.map((photo, index) => (
+                  <div
+                    key={index}
+                    className={`border-2 rounded-lg p-3 flex items-start gap-3 transition-colors ${
+                      photo.isPrimary
+                        ? 'border-emerald-500 bg-emerald-50'
+                        : 'border-gray-200 bg-gray-50'
+                    }`}
+                  >
+                    {/* Photo Thumbnail */}
+                    <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <ImageIcon className="w-8 h-8 text-gray-400" />
+                    </div>
+
+                    {/* Photo Info - Name, Size, and Primary Badge */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{photo.name}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-gray-500">{(photo.size / 1024).toFixed(1)} KB</p>
+                        {photo.isPrimary && (
+                          <span className="inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full whitespace-nowrap bg-emerald-500 text-white">
+                            Primary
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 flex-shrink-0">
+                      {!photo.isPrimary && (
+                        <button
+                          onClick={() => {
+                            const newPhotos = formData.photos.map((p, i) => ({
+                              ...p,
+                              isPrimary: i === index
+                            }));
+                            onFormChange({ ...formData, photos: newPhotos });
+                          }}
+                          className="text-xs font-semibold text-emerald-600 bg-emerald-100 hover:bg-emerald-200 px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          Set Primary
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          const newPhotos = formData.photos.filter((_, i) => i !== index);
+                          onFormChange({ ...formData, photos: newPhotos });
+                        }}
+                        className="text-xs font-semibold text-red-600 hover:text-red-700 px-2 py-1 hover:bg-red-100 rounded transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Upload Area */}
+            <label className="border-2 border-dashed border-emerald-300 rounded-lg p-8 flex flex-col items-center gap-3 cursor-pointer hover:border-emerald-500 hover:bg-emerald-50 transition-colors">
+              <div className="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center">
+                <Upload className="w-6 h-6 text-emerald-600" />
+              </div>
+              <p className="text-sm font-semibold text-gray-900">
+                Add more photos
+              </p>
+              <p className="text-xs text-gray-500">PNG, JPG or WEBP (max. 5MB)</p>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => {
+                  const files = e.currentTarget.files;
+                  if (files) {
+                    const newPhotos = Array.from(files).map((file, index) => ({
+                      name: file.name,
+                      size: file.size,
+                      file: file,
+                      displayOrder: formData.photos.length + index, // Auto-assign displayOrder
+                      isPrimary: formData.photos.length === 0 && index === 0 // First photo is primary
+                    }));
+                    onFormChange({ 
+                      ...formData, 
+                      photos: [...formData.photos, ...newPhotos]
+                    });
+                  }
+                  // Reset input so same file can be selected again
+                  e.currentTarget.value = '';
+                }}
+                className="hidden"
+              />
+            </label>
           </div>
 
           {/* Item Name */}
@@ -138,8 +294,8 @@ export function MenuItemModal({
           <div className="flex flex-col gap-2">
             <label className="text-sm font-semibold text-gray-900">Category *</label>
             <select
-              value={formData.category}
-              onChange={(e) => onFormChange({ ...formData, category: e.target.value })}
+              value={formData.categoryId}
+              onChange={(e) => onFormChange({ ...formData, categoryId: e.target.value })}
               className="px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
               <option value="">Select category</option>
@@ -163,22 +319,65 @@ export function MenuItemModal({
             />
           </div>
 
-          {/* Price */}
-          <div className="flex flex-col gap-2">
-            <label className="text-sm font-semibold text-gray-900">Price *</label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-semibold">
-                $
-              </span>
+          {/* Price & Preparation Time Row */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Price */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-gray-900">Price *</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-semibold">
+                  $
+                </span>
+                <input
+                  type="number"
+                  value={formData.price || ''}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value);
+                    const finalValue = isNaN(value) ? 0 : Math.max(0, value);
+                    onFormChange({ ...formData, price: finalValue });
+                  }}
+                  placeholder="0.00"
+                  step="0.01"
+                  min="0"
+                  className="w-full pl-7 pr-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            </div>
+
+            {/* Preparation Time */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-gray-900">Prep Time (min)</label>
               <input
                 type="number"
-                value={formData.price}
-                onChange={(e) => onFormChange({ ...formData, price: e.target.value })}
-                placeholder="0.00"
-                step="0.01"
-                className="w-full pl-7 pr-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+                value={formData.preparationTime || ''}
+                onChange={(e) => {
+                  const value = parseInt(e.target.value);
+                  const finalValue = isNaN(value) ? 0 : Math.max(0, Math.min(240, value));
+                  onFormChange({ ...formData, preparationTime: finalValue });
+                }}
+                placeholder="0"
+                min="0"
+                max="240"
+                className="px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
               />
             </div>
+          </div>
+
+          {/* Display Order */}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-gray-900">Display Order</label>
+            <input
+              type="number"
+              value={formData.displayOrder || ''}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                const finalValue = isNaN(value) ? 0 : Math.max(0, value);
+                onFormChange({ ...formData, displayOrder: finalValue });
+              }}
+              placeholder="0"
+              min="0"
+              className="px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
+            />
           </div>
 
           {/* Status */}
@@ -189,15 +388,48 @@ export function MenuItemModal({
               onChange={(e) =>
                 onFormChange({
                   ...formData,
-                  status: e.target.value as 'available' | 'unavailable' | 'sold_out',
+                  status: e.target.value as MenuItemStatus,
                 })
               }
               className="px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
             >
-              <option value="available">Available</option>
-              <option value="unavailable">Unavailable</option>
-              <option value="sold_out">Sold Out</option>
+              {STATUS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
             </select>
+          </div>
+
+          {/* Available Toggle */}
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-gray-900">
+                Available (In Stock)
+              </span>
+              <span className="text-xs text-gray-500">Mark this item as available for ordering</span>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.available}
+                onChange={(e) =>
+                  onFormChange({ ...formData, available: e.target.checked })
+                }
+                className="sr-only peer"
+              />
+              <div
+                className={`w-11 h-6 rounded-full relative transition-colors ${
+                  formData.available ? 'bg-emerald-500' : 'bg-gray-200'
+                }`}
+              >
+                <div
+                  className={`absolute top-0.5 left-0.5 bg-white border border-gray-300 rounded-full h-5 w-5 transition-transform ${
+                    formData.available ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </div>
+            </label>
           </div>
 
           {/* Dietary Tags */}
@@ -212,6 +444,27 @@ export function MenuItemModal({
                   className={`px-3 py-2 rounded-lg border text-sm font-medium ${
                     formData.dietary.includes(option.value)
                       ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
+                      : 'bg-white border-gray-300 text-gray-700'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Allergens */}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-semibold text-gray-900">Allergens</label>
+            <div className="flex flex-wrap gap-2">
+              {ALLERGEN_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => toggleAllergen(option.value)}
+                  className={`px-3 py-2 rounded-lg border text-sm font-medium ${
+                    formData.allergens.includes(option.value)
+                      ? 'bg-red-50 border-red-500 text-red-700'
                       : 'bg-white border-gray-300 text-gray-700'
                   }`}
                 >
@@ -324,6 +577,7 @@ export function MenuItemModal({
 interface CategoryModalProps {
   isOpen: boolean;
   mode: 'add' | 'edit';
+  categoryId?: string;
   name: string;
   description: string;
   displayOrder: string;
@@ -340,6 +594,7 @@ interface CategoryModalProps {
 export function CategoryModal({
   isOpen,
   mode,
+  categoryId,
   name,
   description,
   displayOrder,
@@ -354,20 +609,27 @@ export function CategoryModal({
 }: CategoryModalProps) {
   if (!isOpen) return null;
 
+  // Load fresh category data when editing
+  const { data: freshCategoryData } = useCategory(categoryId || '', {
+    enabled: mode === 'edit' && !!categoryId
+  });
+
+  // Pre-fill form when data loads
+  useEffect(() => {
+    if (mode === 'edit' && freshCategoryData) {
+      onNameChange(freshCategoryData.name);
+      onDescriptionChange(freshCategoryData.description || '');
+      onDisplayOrderChange(String(freshCategoryData.displayOrder || ''));
+      onActiveChange(freshCategoryData.active);
+    }
+  }, [mode, freshCategoryData, onNameChange, onDescriptionChange, onDisplayOrderChange, onActiveChange]);
+
   const isValid = name.trim();
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center z-50"
-      style={{
-        backgroundColor: 'rgba(255, 255, 255, 0.4)',
-        backdropFilter: 'blur(16px)',
-      }}
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div
         className="bg-white w-full max-w-md mx-4 rounded-lg shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
@@ -409,7 +671,11 @@ export function CategoryModal({
             <input
               type="number"
               value={displayOrder}
-              onChange={(e) => onDisplayOrderChange(e.target.value)}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                const finalValue = isNaN(value) ? '0' : Math.max(0, value).toString();
+                onDisplayOrderChange(finalValue);
+              }}
               placeholder="0"
               min="0"
               className="px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-emerald-500"
@@ -488,17 +754,9 @@ export function DeleteConfirmModal({
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 flex items-center justify-center z-50"
-      style={{
-        backgroundColor: 'rgba(255, 255, 255, 0.4)',
-        backdropFilter: 'blur(16px)',
-      }}
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div
         className="bg-white w-full max-w-md mx-4 rounded-lg shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">

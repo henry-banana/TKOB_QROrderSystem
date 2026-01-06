@@ -18,6 +18,12 @@ export const menuCategoriesMock = {
     await new Promise(resolve => setTimeout(resolve, 300));
     return mockCategories;
   },
+  async findOne(id: string) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const category = mockCategories.find(c => c.id === id);
+    if (!category) throw new Error(`Category ${id} not found`);
+    return category;
+  },
   async create(data: any) {
     await new Promise(resolve => setTimeout(resolve, 400));
     const maxDisplayOrder = mockCategories.reduce((max, cat) => Math.max(max, cat.displayOrder || 0), -1);
@@ -60,31 +66,127 @@ export const menuCategoriesMock = {
  * Menu Items Mock
  */
 export const menuItemsMock = {
-  async findAll() {
+  async findAll(params?: any) {
     await new Promise(resolve => setTimeout(resolve, 300));
-    return mockMenuItems;
+    
+    // Get all items with mapped fields
+    const allItems = mockMenuItems.map(item => {
+      // Populate modifierGroups from modifierGroupIds
+      const modifierGroups = item.modifierGroupIds
+        ? mockModifierGroups.filter(mg => item.modifierGroupIds?.includes(mg.id))
+        : [];
+      
+      return {
+        ...item,
+        isAvailable: item.available,
+        dietary: item.tags, // Map tags → dietary for UI
+        modifierGroups, // Add populated modifier groups
+      };
+    });
+
+    console.log('[Mock Adapter] Total items from mockMenuItems:', mockMenuItems.length);
+    console.log('[Mock Adapter] Returning items count:', allItems.length);
+
+    // For mock data, return all items without pagination
+    // Client-side will handle filtering and pagination
+    return allItems;
+  },
+  async findOne(id: string) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const item = mockMenuItems.find(i => i.id === id);
+    if (!item) throw new Error(`Item ${id} not found`);
+    
+    const modifierGroups = item.modifierGroupIds
+      ? mockModifierGroups.filter(mg => item.modifierGroupIds?.includes(mg.id))
+      : [];
+    
+    return {
+      ...item,
+      isAvailable: item.available,
+      dietary: item.tags,
+      modifierGroups,
+    };
+  },
+  async toggleAvailability(id: string, data: { isAvailable: boolean }) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const item = mockMenuItems.find(i => i.id === id);
+    if (!item) throw new Error(`Item ${id} not found`);
+    
+    item.available = data.isAvailable;
+    
+    const modifierGroups = item.modifierGroupIds
+      ? mockModifierGroups.filter(mg => item.modifierGroupIds?.includes(mg.id))
+      : [];
+    
+    return {
+      ...item,
+      isAvailable: item.available,
+      dietary: item.tags,
+      modifierGroups,
+    };
   },
   async create(data: any) {
     await new Promise(resolve => setTimeout(resolve, 400));
     const newItem = {
       id: Date.now().toString(), 
       ...data,
+      available: data.available ?? true, // Ensure available field exists
+      tags: data.tags || data.dietary || [], // Map dietary → tags
+      allergens: data.allergens || [],
+      preparationTime: data.preparationTime || 0,
+      displayOrder: data.displayOrder ?? 0, // Ensure displayOrder field exists
+      status: data.status || 'DRAFT',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     mockMenuItems.push(newItem);
-    return newItem;
+    
+    // Populate modifierGroups for return
+    const modifierGroups = newItem.modifierGroupIds
+      ? mockModifierGroups.filter(mg => newItem.modifierGroupIds?.includes(mg.id))
+      : [];
+    
+    return {
+      ...newItem,
+      isAvailable: newItem.available,
+      dietary: newItem.tags,
+      modifierGroups,
+    };
   },
   async update(id: string, data: any) {
     await new Promise(resolve => setTimeout(resolve, 300));
     const index = mockMenuItems.findIndex(i => i.id === id);
     if (index !== -1) {
+      // Map fields from UI to mock data format
+      const updateData = {
+        ...data,
+        available: data.available ?? mockMenuItems[index].available,
+        tags: data.tags || data.dietary || mockMenuItems[index].tags,
+        allergens: data.allergens ?? mockMenuItems[index].allergens,
+        preparationTime: data.preparationTime ?? mockMenuItems[index].preparationTime,
+        displayOrder: data.displayOrder ?? mockMenuItems[index].displayOrder,
+        status: data.status ?? mockMenuItems[index].status,
+        modifierGroupIds: data.modifierGroupIds ?? mockMenuItems[index].modifierGroupIds,
+      };
+      
       mockMenuItems[index] = { 
         ...mockMenuItems[index], 
-        ...data,
+        ...updateData,
         updatedAt: new Date().toISOString(),
       };
-      return mockMenuItems[index];
+      
+      // Populate modifierGroups for return
+      const modifierGroups = mockMenuItems[index].modifierGroupIds
+        ? mockModifierGroups.filter(mg => mockMenuItems[index].modifierGroupIds?.includes(mg.id))
+        : [];
+      
+      // Return with UI field mapping
+      return {
+        ...mockMenuItems[index],
+        isAvailable: mockMenuItems[index].available,
+        dietary: mockMenuItems[index].tags,
+        modifierGroups,
+      };
     }
     return { id, ...data };
   },
@@ -185,12 +287,58 @@ export const modifiersMock = {
  * Menu Photos Mock
  */
 export const menuPhotosMock = {
-  async upload(file: File) {
+  async upload(itemId: string, data: { file: File }) {
     await new Promise(resolve => setTimeout(resolve, 500));
-    return { url: URL.createObjectURL(file), id: Date.now().toString() };
+    return {
+      id: `photo-${Date.now()}`,
+      url: URL.createObjectURL(data.file),
+      filename: data.file.name,
+      isPrimary: false,
+      displayOrder: 0,
+      size: data.file.size,
+      mimeType: data.file.type,
+      createdAt: new Date().toISOString(),
+    };
   },
-  async delete(id: string) {
+  async getPhotos(itemId: string) {
     await new Promise(resolve => setTimeout(resolve, 300));
+    const item = mockMenuItems.find(i => i.id === itemId);
+    return item?.photos || [];
+  },
+  async delete(itemId: string, photoId: string) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const item = mockMenuItems.find(i => i.id === itemId);
+    if (item?.photos) {
+      item.photos = item.photos.filter(p => p.id !== photoId);
+    }
+    return { success: true };
+  },
+  async setPrimary(itemId: string, photoId: string) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const item = mockMenuItems.find(i => i.id === itemId);
+    if (!item?.photos) throw new Error(`Item ${itemId} not found`);
+    item.photos.forEach(p => p.isPrimary = p.id === photoId);
+    return { success: true };
+  },
+  async bulkUpload(itemId: string, data: { files: File[] }) {
+    await new Promise(resolve => setTimeout(resolve, 500 * data.files.length));
+    return data.files.map((file, i) => ({
+      id: `photo-${Date.now()}-${i}`,
+      url: URL.createObjectURL(file),
+      filename: file.name,
+      isPrimary: i === 0,
+      displayOrder: i,
+      size: file.size,
+      mimeType: file.type,
+      createdAt: new Date().toISOString(),
+    }));
+  },
+  async updateOrder(itemId: string, photoId: string, data: { displayOrder: number }) {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const item = mockMenuItems.find(i => i.id === itemId);
+    if (!item?.photos) throw new Error(`Item ${itemId} not found`);
+    const photo = item.photos.find(p => p.id === photoId);
+    if (photo) photo.displayOrder = data.displayOrder;
     return { success: true };
   },
 };

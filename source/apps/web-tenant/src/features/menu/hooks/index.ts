@@ -70,10 +70,25 @@ export const useDeleteCategory = (options?: { mutation?: any }) => {
 /**
  * Menu Items Hooks
  */
-export const useMenuItems = () => {
+
+interface UseMenuItemsParams {
+  categoryId?: string;
+  status?: string;
+  availability?: 'available' | 'unavailable';
+  chefRecommended?: boolean;
+  searchQuery?: string;
+  sortBy?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export const useMenuItems = (params?: UseMenuItemsParams) => {
   return useQuery({
-    queryKey: ['menu', 'items'],
-    queryFn: () => menuAdapter.items.findAll(),
+    queryKey: ['menu', 'items', params],
+    queryFn: () => {
+      // Pass pagination and filter params to adapter
+      return menuAdapter.items.findAll(params);
+    },
   });
 };
 
@@ -174,12 +189,24 @@ export const useDeleteModifier = (options?: { mutation?: any }) => {
 };
 
 /**
- * Menu Photos Hooks
+ * Menu Items - FindOne Hook
  */
-export const useUploadPhoto = (options?: { mutation?: any }) => {
+export const useMenuItem = (id: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ['menu', 'items', id],
+    queryFn: () => menuAdapter.items.findOne(id),
+    enabled: options?.enabled ?? !!id,
+  });
+};
+
+/**
+ * Menu Items - Toggle Availability Hook
+ */
+export const useToggleItemAvailability = (options?: { mutation?: any }) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (file: File) => menuAdapter.photos.upload(file),
+    mutationFn: ({ id, isAvailable }: { id: string; isAvailable: boolean }) =>
+      menuAdapter.items.toggleAvailability(id, { isAvailable }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['menu', 'items'] });
       options?.mutation?.onSuccess?.(data);
@@ -190,12 +217,72 @@ export const useUploadPhoto = (options?: { mutation?: any }) => {
   });
 };
 
-export const useDeletePhoto = () => {
+/**
+ * Menu Categories - FindOne Hook
+ */
+export const useCategory = (id: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ['menu', 'categories', id],
+    queryFn: () => menuAdapter.categories.findOne(id),
+    enabled: options?.enabled ?? !!id,
+  });
+};
+
+/**
+ * Menu Photos Hooks
+ */
+export const useUploadPhoto = (options?: { mutation?: any }) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (photoId: string) => menuAdapter.photos.delete(photoId),
+    mutationFn: ({ itemId, file }: { itemId: string; file: File }) =>
+      menuAdapter.photos.upload(itemId, { file }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['menu', 'items'] });
+      queryClient.invalidateQueries({ queryKey: ['menu', 'photos'] });
+      options?.mutation?.onSuccess?.(data);
+    },
+    onError: (error) => {
+      options?.mutation?.onError?.(error);
+    },
+  });
+};
+
+export const useDeletePhoto = (options?: { mutation?: any }) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, photoId }: { itemId: string; photoId: string }) =>
+      menuAdapter.photos.delete(itemId, photoId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['menu', 'items'] });
+      queryClient.invalidateQueries({ queryKey: ['menu', 'photos'] });
+      options?.mutation?.onSuccess?.();
+    },
+    onError: (error) => {
+      options?.mutation?.onError?.(error);
+    },
+  });
+};
+
+export const useItemPhotos = (itemId: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ['menu', 'photos', itemId],
+    queryFn: () => menuAdapter.photos.getPhotos(itemId),
+    enabled: options?.enabled ?? !!itemId,
+  });
+};
+
+export const useSetPrimaryPhoto = (options?: { mutation?: any }) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ itemId, photoId }: { itemId: string; photoId: string }) =>
+      menuAdapter.photos.setPrimary(itemId, photoId),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['menu', 'items'] });
+      queryClient.invalidateQueries({ queryKey: ['menu', 'photos'] });
+      options?.mutation?.onSuccess?.(data);
+    },
+    onError: (error) => {
+      options?.mutation?.onError?.(error);
     },
   });
 };

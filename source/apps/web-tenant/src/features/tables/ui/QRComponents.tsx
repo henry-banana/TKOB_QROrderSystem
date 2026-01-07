@@ -63,7 +63,6 @@ export function QRModal({
       onClose={onClose}
       title="QR Code Preview"
       size="lg"
-      className="relative"
     >
       {/* Header Actions */}
       <div className="absolute top-4 sm:top-6 right-4 sm:right-6 flex flex-col md:flex-row md:items-center gap-2 z-10">

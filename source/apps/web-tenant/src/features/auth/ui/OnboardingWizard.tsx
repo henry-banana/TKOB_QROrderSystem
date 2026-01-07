@@ -581,7 +581,7 @@ export function OnboardingWizard({ onNavigate }: OnboardingWizardProps) {
             </div>
             <div>
               <h1 className="font-heading text-xl sm:text-2xl font-bold text-gray-900">Welcome to TKQR</h1>
-              <p className="text-sm text-gray-600">Let's set up your restaurant</p>
+              <p className="text-sm text-gray-600">Let&apos;s set up your restaurant</p>
             </div>
           </div>
 

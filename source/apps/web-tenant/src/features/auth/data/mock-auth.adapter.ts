@@ -64,6 +64,7 @@ export class MockAuthAdapter implements IAuthAdapter {
     return {
       registrationToken: `mock-token-${Date.now()}`,
       message: 'Registration successful. Please check your email for OTP.',
+      expiresIn: 3600,
     };
   }
 
@@ -81,7 +82,7 @@ export class MockAuthAdapter implements IAuthAdapter {
     };
   }
 
-  async resetPassword(data: ResetPasswordData): Promise<{ success: boolean; message: string }> {
+  async resetPassword(data: { token: string; newPassword: string; confirmPassword: string }): Promise<{ success: boolean; message: string }> {
     console.log('[MockAuthAdapter] Reset password called');
     await this.delay();
 

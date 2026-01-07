@@ -36,7 +36,7 @@ type ModifierGroupModalProps = {
   optionPrice: string;
   onOptionPriceChange: (price: string) => void;
   onAddOption: () => void;
-  onToggleOptionActive: (index: number) => void;
+  onRemoveOption: (index: number) => void;
   onClose: () => void;
   onSubmit: () => void;
 };
@@ -66,7 +66,7 @@ export function ModifierGroupModal({
   optionPrice,
   onOptionPriceChange,
   onAddOption,
-  onToggleOptionActive,
+  onRemoveOption,
   onClose,
   onSubmit,
 }: ModifierGroupModalProps) {
@@ -82,7 +82,7 @@ export function ModifierGroupModal({
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] animate-scaleIn flex flex-col">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl shrink-0">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl shrink-0 z-10">
           <h3 className="text-lg font-semibold text-gray-900">
             {mode === 'create' ? 'Create Modifier Group' : 'Edit Modifier Group'}
           </h3>
@@ -94,9 +94,10 @@ export function ModifierGroupModal({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {/* Group Name */}
-          <div>
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="space-y-4">
+            {/* Group Name */}
+            <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Group Name <span className="text-red-500">*</span>
             </label>
@@ -132,7 +133,7 @@ export function ModifierGroupModal({
               type="number"
               min="0"
               step="1"
-              value={formDisplayOrder}
+              value={formDisplayOrder ?? 0}
               onChange={(e) => onDisplayOrderChange(parseInt(e.target.value) || 0)}
               placeholder="e.g., 0"
               className="w-full px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
@@ -258,35 +259,37 @@ export function ModifierGroupModal({
             </label>
 
             {/* Add Option Form */}
-            <div className="flex gap-2 mb-3">
+            <div className="space-y-2 mb-3">
               <input
                 type="text"
                 value={optionName}
                 onChange={(e) => onOptionNameChange(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Option name"
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
-              <input
-                type="number"
-                value={optionPrice}
-                onChange={(e) => onOptionPriceChange(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder={`Price (${CURRENCY_CONFIG.code})`}
-                className="w-32 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              <button
-                type="button"
-                onClick={onAddOption}
-                className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors"
-              >
-                Add
-              </button>
+              <div className="flex gap-2">
+                <input
+                  type="number"
+                  value={optionPrice}
+                  onChange={(e) => onOptionPriceChange(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder={`Price (${CURRENCY_CONFIG.code})`}
+                  className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <button
+                  type="button"
+                  onClick={onAddOption}
+                  className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors whitespace-nowrap"
+                >
+                  Add
+                </button>
+              </div>
             </div>
 
-            {/* Options List */}
+            {/* Options List - Scrollable */}
             {formOptions.length > 0 ? (
-              <div className="space-y-2 border border-gray-200 rounded-lg p-3">
+              <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 space-y-2">
                 {formOptions.map((option, idx) => (
                   <div
                     key={idx}
@@ -296,38 +299,21 @@ export function ModifierGroupModal({
                         : 'bg-gray-100 border border-gray-200 opacity-60'
                     }`}
                   >
-                    <div className="flex-1">
-                      <div
-                        className={`text-sm font-medium transition-colors ${
-                          option.active ? 'text-gray-900' : 'text-gray-500'
-                        }`}
-                      >
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-900">
                         {option.name}
-                        {!option.active && (
-                          <span className="ml-2 text-xs font-semibold text-gray-500 uppercase">
-                            Inactive
-                          </span>
-                        )}
                       </div>
-                      <div
-                        className={`text-xs transition-colors ${
-                          option.active ? 'text-gray-500' : 'text-gray-400'
-                        }`}
-                      >
+                      <div className="text-xs text-gray-500">
                         {option.priceDelta >= 0 ? '+' : ''}
                         {CURRENCY_CONFIG.format(option.priceDelta)}
                       </div>
                     </div>
                     <button
                       type="button"
-                      onClick={() => onToggleOptionActive(idx)}
-                      className={`px-3 py-1.5 text-xs font-medium rounded transition-all whitespace-nowrap ${
-                        option.active
-                          ? 'text-gray-700 bg-gray-200 hover:bg-gray-300'
-                          : 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200'
-                      }`}
+                      onClick={() => onRemoveOption(idx)}
+                      className="ml-3 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded transition-all whitespace-nowrap flex-shrink-0"
                     >
-                      {option.active ? 'Disable' : 'Enable'}
+                      Delete
                     </button>
                   </div>
                 ))}
@@ -338,9 +324,10 @@ export function ModifierGroupModal({
               </div>
             )}
           </div>
+          </div>
         </div>
 
-        <div className="sticky bottom-0 bg-gray-50 px-6 py-4 flex gap-3 border-t border-gray-200 rounded-b-2xl shrink-0">
+        <div className="sticky bottom-0 bg-gray-50 px-6 py-4 flex gap-3 border-t border-gray-200 rounded-b-2xl shrink-0 z-10">
           <button
             onClick={onClose}
             className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"

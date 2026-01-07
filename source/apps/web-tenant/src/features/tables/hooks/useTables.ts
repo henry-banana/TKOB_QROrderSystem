@@ -135,7 +135,7 @@ export const useRegenerateAllQR = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: () => tablesService.regenerateAllQR(),
+    mutationFn: () => tablesAdapter.regenerateAllQR(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tables', 'list'] });
     },

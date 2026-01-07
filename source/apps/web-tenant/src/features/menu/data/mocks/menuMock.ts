@@ -131,9 +131,10 @@ export const menuItemsMock = {
   },
   async delete(id: string) {
     await new Promise(resolve => setTimeout(resolve, 300));
-    const index = mockMenuItems.findIndex(i => i.id === id);
-    if (index !== -1) {
-      mockMenuItems.splice(index, 1);
+    const item = mockMenuItems.find(i => i.id === id);
+    if (item) {
+      (item as any).status = 'ARCHIVED';
+      item.updatedAt = new Date().toISOString();
     }
     return { success: true };
   },
@@ -171,22 +172,29 @@ export const modifiersMock = {
   },
   async update(id: string, data: any) {
     await new Promise(resolve => setTimeout(resolve, 300));
-    const index = mockModifierGroups.findIndex(m => m.id === id);
-    if (index !== -1) {
-      mockModifierGroups[index] = { 
-        ...mockModifierGroups[index], 
+    const group = mockModifierGroups.find(m => m.id === id);
+    if (group) {
+      // Update fields but preserve options from data if provided
+      const updated = { 
+        ...group, 
         ...data,
         updatedAt: new Date().toISOString(),
       };
-      return mockModifierGroups[index];
+      // Ensure options is set correctly
+      if (data.options) {
+        updated.options = data.options;
+      }
+      Object.assign(group, updated);
+      return updated;
     }
     return { id, ...data };
   },
   async delete(id: string) {
     await new Promise(resolve => setTimeout(resolve, 300));
-    const index = mockModifierGroups.findIndex(m => m.id === id);
-    if (index !== -1) {
-      mockModifierGroups.splice(index, 1);
+    const group = mockModifierGroups.find(m => m.id === id);
+    if (group) {
+      (group as any).active = false;
+      group.updatedAt = new Date().toISOString();
     }
     return { success: true };
   },

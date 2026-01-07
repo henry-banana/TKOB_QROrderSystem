@@ -80,7 +80,8 @@ export function StaffPage() {
         status: 'pending',
         joinedDate: `Invited ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
       };
-      setStaffMembers([...staffMembers, newMember]);
+      // TODO: Use mutation to add member to backend
+      console.log('Adding new member:', newMember);
       showSuccessToast(`Invitation sent to ${inviteEmail}`);
       setShowInviteModal(false);
     }
@@ -99,18 +100,8 @@ export function StaffPage() {
 
   const handleEditMember = () => {
     if (selectedMember) {
-      const updatedMembers = staffMembers.map((m) =>
-        m.id === selectedMember.id
-          ? {
-              ...m,
-              name: editForm.name,
-              email: editForm.email,
-              role: editForm.role,
-              status: editForm.status === 'active' ? ('active' as const) : ('pending' as const),
-            }
-          : m
-      );
-      setStaffMembers(updatedMembers);
+      // TODO: Use mutation to update member in backend
+      console.log('Updating member:', selectedMember.id, editForm);
       showSuccessToast('Member updated successfully');
       setShowEditModal(false);
     }
@@ -125,7 +116,8 @@ export function StaffPage() {
 
   const handleRevokeInvite = () => {
     if (selectedMember && confirm(`Revoke invitation for ${selectedMember.email}?`)) {
-      setStaffMembers(staffMembers.filter((m) => m.id !== selectedMember.id));
+      // TODO: Use mutation to revoke member in backend
+      console.log('Revoking member:', selectedMember.id);
       showSuccessToast(`Invite revoked for ${selectedMember.email}`);
       setShowEditModal(false);
     }

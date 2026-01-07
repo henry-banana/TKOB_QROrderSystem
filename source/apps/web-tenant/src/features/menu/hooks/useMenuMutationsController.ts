@@ -182,13 +182,19 @@ export function useMenuMutationsController(selectedCategory: string) {
       categoryData.displayOrder = parseInt(displayOrder, 10);
     }
 
-    if (categoryModalMode === 'edit' && editingCategory) {
-      await menuMutations.categories.update({
-        id: editingCategory.id,
-        data: categoryData as UpdateMenuCategoryDto,
-      });
-    } else {
-      await menuMutations.categories.create(categoryData);
+    try {
+      if (categoryModalMode === 'edit' && editingCategory) {
+        await menuMutations.categories.update({
+          id: editingCategory.id,
+          data: categoryData as UpdateMenuCategoryDto,
+        });
+      } else {
+        await menuMutations.categories.create(categoryData);
+      }
+
+      closeCategoryModal();
+    } catch (error) {
+      console.error('Error saving category:', error);
     }
   };
 

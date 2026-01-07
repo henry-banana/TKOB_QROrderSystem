@@ -223,4 +223,24 @@ export class TablesMockAdapter implements ITablesAdapter {
     const locations = [...new Set(mockTables.map((t) => t.location))];
     return locations;
   }
+
+  async regenerateAllQR(): Promise<{
+    successCount: number;
+    totalProcessed: number;
+    generatedAt: string;
+  }> {
+    await fakeDelay();
+    const generatedAt = new Date().toISOString();
+    
+    // Update all tables with new QR data
+    mockTables.forEach((table) => {
+      table.qrGeneratedAt = generatedAt;
+    });
+
+    return {
+      successCount: mockTables.length,
+      totalProcessed: mockTables.length,
+      generatedAt,
+    };
+  }
 }

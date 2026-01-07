@@ -9,16 +9,16 @@ import {
   useCreateModifier,
   useUpdateModifier,
   useDeleteModifier,
-} from '../hooks';
+} from '../../hooks';
 import { getModifierGroupControllerFindAllQueryKey } from '@/services/generated/menu-modifiers/menu-modifiers';
 
 // Import extracted components
-import { ModifiersToolbar, ModifiersGrid } from './components/modifiers';
-import { ModifierGroupModal, ModifierDeleteConfirmModal } from './modals';
+import { ModifiersToolbar, ModifiersGrid } from '../components/modifiers';
+import { ModifierGroupModal, ModifierDeleteConfirmModal } from '../modals';
 
 // Import types and constants
-import type { ModifierGroupFormData, ModifierFilters, ModalMode } from '../model/modifiers';
-import { INITIAL_MODIFIER_FORM, DEFAULT_CHOICES } from '../model/modifiers';
+import type { ModifierGroupFormData, ModifierFilters, ModalMode } from '../../model/modifiers';
+import { INITIAL_MODIFIER_FORM, DEFAULT_CHOICES } from '../../model/modifiers';
 
 // Import shared components
 // MenuTabs removed - handled by parent MenuHubPage

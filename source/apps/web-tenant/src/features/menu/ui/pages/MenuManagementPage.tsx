@@ -3,10 +3,10 @@
 import React from 'react';
 import { UtensilsCrossed, CheckCircle } from 'lucide-react';
 import { Card } from '@/shared/components/Card';
-import type { SortOption } from '../model/types';
-import { CategorySidebar, MenuToolbar, MenuItemGrid } from './components';
-import { CategoryModal, DeleteConfirmModal, MenuItemModal } from './modals';
-import { useMenuManagementController } from '../hooks/useMenuManagementController';
+import type { SortOption } from '../../model/types';
+import { CategorySidebar, MenuToolbar, MenuItemGrid } from '../components';
+import { CategoryModal, DeleteConfirmModal, MenuItemModal } from '../modals';
+import { useMenuManagementController } from '../../hooks/useMenuManagementController';
 
 export function MenuManagementPage() {
   const controller = useMenuManagementController();

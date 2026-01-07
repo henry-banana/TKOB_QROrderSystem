@@ -137,7 +137,7 @@ export function WaiterOrderCard({
             <div className="flex flex-col gap-1">
               {/* Completed Badge */}
               {activeTab === 'completed' && (
-                <Badge variant="neutral">
+                <Badge variant="default">
                   <span className="text-[11px]">Completed</span>
                 </Badge>
               )}

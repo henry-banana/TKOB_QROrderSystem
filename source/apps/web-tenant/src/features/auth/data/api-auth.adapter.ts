@@ -13,7 +13,8 @@ import type {
   AuthResponse,
   OtpVerificationResponse,
   SlugAvailabilityResponse,
-} from '../model/auth.types';
+} from '@/features/auth/model/auth.types';
+import { AuthUserResponseDtoRole, RegisterSubmitResponseDto } from '@/services/generated/models';
 
 export class ApiAuthAdapter implements IAuthAdapter {
   private readonly apiUrl: string;
@@ -35,7 +36,7 @@ export class ApiAuthAdapter implements IAuthAdapter {
         }
       );
 
-      const { accessToken, user } = response.data;
+      const { accessToken, refreshToken, expiresIn, user, tenant } = response.data;
 
       // Store token in localStorage
       if (typeof window !== 'undefined') {
@@ -43,35 +44,30 @@ export class ApiAuthAdapter implements IAuthAdapter {
       }
 
       return {
-        success: true,
-        message: 'Login successful',
-        token: accessToken,
+        accessToken,
+        refreshToken,
+        expiresIn,
         user: {
           id: user.id,
           email: user.email,
-          name: user.fullName,
+          fullName: user.fullName,
           role: this.mapRoleFromBackend(user.role),
           tenantId: user.tenantId,
         },
+        tenant,
       };
     } catch (error: unknown) {
       console.error('[ApiAuthAdapter] Login error:', error);
 
       if (axios.isAxiosError(error) && error.response) {
-        return {
-          success: false,
-          message: error.response.data?.message || 'Login failed',
-        };
+        throw new Error(error.response.data?.message || 'Login failed');
       }
 
-      return {
-        success: false,
-        message: 'Network error. Please try again.',
-      };
+      throw new Error('Network error. Please try again.');
     }
   }
 
-  async signup(data: SignupData): Promise<AuthResponse> {
+  async signup(data: SignupData): Promise<RegisterSubmitResponseDto> {
     console.log('[ApiAuthAdapter] Signup called with:', data);
 
     try {
@@ -93,18 +89,15 @@ export class ApiAuthAdapter implements IAuthAdapter {
         keys: Object.keys(submitResponse.data || {}),
       });
 
-      // Backend might return it as 'token' or 'registrationToken' or 'data.registrationToken'
-      const registrationToken = 
-        submitResponse.data?.registrationToken || 
-        submitResponse.data?.token ||
-        submitResponse.data?.data?.registrationToken;
+      // Backend should return registrationToken, message, and expiresIn
+      const { registrationToken, message, expiresIn } = submitResponse.data;
 
       console.log('[ApiAuthAdapter] Found registration token:', registrationToken ? 'YES' : 'NO');
 
       return {
-        success: true,
-        message: submitResponse.data?.message || 'Check your email for OTP',
         registrationToken,
+        message: message || 'Check your email for OTP',
+        expiresIn,
       };
     } catch (error: unknown) {
       console.error('[ApiAuthAdapter] Signup error:', error);
@@ -113,16 +106,10 @@ export class ApiAuthAdapter implements IAuthAdapter {
         const errorData = error.response.data as any;
         const message = errorData?.error?.message || errorData?.message || 'Signup failed';
         
-        return {
-          success: false,
-          message: message,
-        };
+        throw new Error(message);
       }
 
-      return {
-        success: false,
-        message: 'Network error. Please try again.',
-      };
+      throw new Error('Network error. Please try again.');
     }
   }
 
@@ -206,7 +193,7 @@ export class ApiAuthAdapter implements IAuthAdapter {
 
       // Backend wraps response in { success: true, data: {...} }
       const responseData = response.data?.data || response.data;
-      const { accessToken, user } = responseData;
+      const { accessToken, refreshToken, expiresIn, user, tenant } = responseData;
 
       console.log('[ApiAuthAdapter] Response data structure:', {
         hasData: !!response.data?.data,
@@ -220,17 +207,17 @@ export class ApiAuthAdapter implements IAuthAdapter {
       }
 
       return {
-        success: true,
-        message: responseData?.message || 'OTP verified',
-        verified: true,
-        token: accessToken,
+        accessToken,
+        refreshToken,
+        expiresIn,
         user: user ? {
           id: user.id,
           email: user.email,
-          name: user.fullName,
+          fullName: user.fullName,
           role: this.mapRoleFromBackend(user.role),
           tenantId: user.tenantId,
         } : undefined,
+        tenant,
       };
     } catch (error: unknown) {
       console.error('[ApiAuthAdapter] Verify OTP error:', error);
@@ -243,22 +230,14 @@ export class ApiAuthAdapter implements IAuthAdapter {
           headers: error.response.headers,
         });
 
-        return {
-          success: false,
-          message: error.response.data?.message || 'Verification failed',
-          verified: false,
-        };
+        throw new Error(error.response.data?.message || 'Verification failed');
       }
 
-      return {
-        success: false,
-        message: 'Network error. Please try again.',
-        verified: false,
-      };
+      throw new Error('Network error. Please try again.');
     }
   }
 
-  async resendOtp(data: ResendOtpData): Promise<{ success: boolean; message: string }> {
+  async resendOtp(data: { email: string }): Promise<{ success: boolean; message: string }> {
     console.log('[ApiAuthAdapter] Resend OTP called');
 
     try {
@@ -344,14 +323,14 @@ export class ApiAuthAdapter implements IAuthAdapter {
   /**
    * Map backend role to frontend role
    */
-  private mapRoleFromBackend(backendRole: string): 'admin' | 'kds' | 'waiter' {
+  private mapRoleFromBackend(backendRole: string): AuthUserResponseDtoRole {
     const role = backendRole.toLowerCase();
     
-    if (role === 'owner') return 'admin';
-    if (role === 'kitchen') return 'kds';
-    if (role === 'waiter' || role === 'server') return 'waiter';
+    if (role === 'owner') return AuthUserResponseDtoRole.OWNER;
+    if (role === 'kitchen') return AuthUserResponseDtoRole.KITCHEN;
+    if (role === 'waiter' || role === 'server' || role === 'staff') return AuthUserResponseDtoRole.STAFF;
     
-    return 'admin'; // Default fallback
+    return AuthUserResponseDtoRole.OWNER; // Default fallback
   }
 
   /**

@@ -105,8 +105,8 @@ export function TablesPage() {
     sortOrder: sortParams.sortOrder,
   });
   
-  const tablesData = apiResponse?.data;
-  const meta = apiResponse?.meta || { totalAll: 0, totalFiltered: 0 };
+  const tablesData = apiResponse || [];
+  const meta = { totalAll: tablesData.length, totalFiltered: tablesData.length };
   
   const createTableMutation = useCreateTable();
   const updateTableMutation = useUpdateTable();
@@ -130,7 +130,6 @@ export function TablesPage() {
       tableNumber: t.displayOrder || 0,
       createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
       description: t.description,
-      hasActiveOrders: t.hasActiveOrders,
       qrToken: t.qrToken,
       qrCodeUrl: t.qrCodeUrl,
     }));
@@ -254,7 +253,7 @@ export function TablesPage() {
           location: formData.zone.toLowerCase(),
           description: formData.description.trim() || undefined,
           displayOrder: parseInt(formData.tableNumber),
-          status: apiStatus,
+          status: apiStatus as 'AVAILABLE' | 'OCCUPIED' | 'RESERVED' | 'INACTIVE',
         },
       };
       
@@ -478,14 +477,15 @@ export function TablesPage() {
   const handlePrintQR = useReactToPrint({
     contentRef: qrPrintRef,
     documentTitle: `QR-Code-${selectedTable?.name || 'Table'}`,
-    onBeforePrint: () => {
+    onBeforePrint: async () => {
       if (!selectedTable || !qrPrintRef.current) {
         throw new Error('QR code not loaded');
       }
     },
     onPrintError: (error) => {
       console.error('Print error:', error);
-      setToastMessage('Print failed: ' + (error?.message || 'Please try again'));
+      const errorMsg = error && typeof error === 'object' && 'message' in (error as any) ? String((error as any).message) : 'Please try again';
+      setToastMessage('Print failed: ' + errorMsg);
       setToastType('error');
       setShowSuccessToast(true);
     },

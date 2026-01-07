@@ -13,7 +13,7 @@ interface FormData {
 
 interface TableFormFieldsProps {
   formData: FormData;
-  setFormData: (data: FormData) => void;
+  setFormData: (data: any) => void;
   autoFocus?: boolean;
   disableTableName?: boolean;
 }

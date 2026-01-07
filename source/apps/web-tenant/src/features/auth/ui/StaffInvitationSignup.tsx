@@ -176,7 +176,7 @@ export function StaffInvitationSignup({ onNavigate }: StaffInvitationSignupProps
                   Welcome to the Team!
                 </h2>
                 <p className="text-gray-600">
-                  Your account has been created. You're now part of <span className="font-semibold text-emerald-600">{invitationDetails.restaurantName}</span>.
+                  Your account has been created. You&apos;re now part of <span className="font-semibold text-emerald-600">{invitationDetails.restaurantName}</span>.
                 </p>
               </div>
 
@@ -260,7 +260,7 @@ export function StaffInvitationSignup({ onNavigate }: StaffInvitationSignupProps
               Join {invitationDetails.restaurantName}
             </h1>
             <p className="text-gray-600">
-              You've been invited by <span className="font-semibold">{invitationDetails.inviterName}</span>
+              You&apos;ve been invited by <span className="font-semibold">{invitationDetails.inviterName}</span>
             </p>
           </div>
 

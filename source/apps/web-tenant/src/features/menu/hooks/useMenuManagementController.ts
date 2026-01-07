@@ -18,6 +18,7 @@ export function useMenuManagementController() {
   const { data: categoriesData } = useMenuCategories();
   const categories = categoriesData || [];
 
+  // Fetch filtered items for display
   const { data: itemsData, isLoading: itemsLoading } = useMenuItems({
     categoryId: filtersController.appliedFilters.categoryId,
     status: filtersController.appliedFilters.status !== 'All Status' ? filtersController.appliedFilters.status : undefined,
@@ -29,6 +30,9 @@ export function useMenuManagementController() {
     pageSize: selectionState.pageSize,
   });
 
+  // Fetch all items (no filters) for total/active counts
+  const { data: allItemsData } = useMenuItems({});
+
   const menuItems = useMemo(() => {
     const normalizedItems = Array.isArray(itemsData)
       ? itemsData
@@ -36,6 +40,14 @@ export function useMenuManagementController() {
 
     return normalizedItems.map((item) => mapMenuItemDtoToVM(item)) as MenuItem[];
   }, [itemsData]);
+
+  const allMenuItems = useMemo(() => {
+    const normalizedItems = Array.isArray(allItemsData)
+      ? allItemsData
+      : ((allItemsData as { data?: unknown[] } | undefined)?.data ?? []);
+
+    return normalizedItems.map((item) => mapMenuItemDtoToVM(item)) as MenuItem[];
+  }, [allItemsData]);
 
   const { data: modifierGroupsData } = useModifiers({ activeOnly: false });
   const modifierGroups = (modifierGroupsData as ModifierGroup[]) || [];
@@ -47,6 +59,10 @@ export function useMenuManagementController() {
   const getFilteredAndSortedItems = () => {
     return menuItems
       .filter((item) => {
+        // Only show archived items if status filter shows "All Status"
+        const isShowingAll = filtersController.appliedFilters.status === 'All Status';
+        if (item.status === 'ARCHIVED' && !isShowingAll) return false;
+
         if (selectionState.selectedCategory !== 'all' && item.categoryId !== selectionState.selectedCategory) return false;
 
         if (filtersController.appliedFilters.searchQuery.trim()) {
@@ -110,12 +126,14 @@ export function useMenuManagementController() {
     filtersController.setAppliedFilters({ ...filtersController.appliedFilters, categoryId });
   };
 
-  const totalItems = menuItems.filter((item) => item.status !== 'ARCHIVED').length;
-  const activeItems = menuItems.filter((item) => item.isAvailable && item.status !== 'ARCHIVED').length;
+  // Calculate totals from all items (regardless of current filters)
+  const totalItems = allMenuItems.filter((item) => item.status !== 'ARCHIVED').length;
+  const activeItems = allMenuItems.filter((item) => item.isAvailable && item.status !== 'ARCHIVED').length;
 
   const categoriesWithCount = categories.map((cat: Category) => ({
     ...cat,
-    itemCount: getCategoryItemCount(cat.id),
+    // Prefer server-provided itemCount; fall back to local tally if missing
+    itemCount: typeof cat.itemCount === 'number' ? cat.itemCount : getCategoryItemCount(cat.id),
   }));
 
   const categoriesForToolbar = categories.map((cat: Category) => ({ id: cat.id, name: cat.name }));

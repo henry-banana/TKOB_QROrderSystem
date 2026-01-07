@@ -34,6 +34,7 @@ export function ModifierGroupModal({
   onSave,
   onFormChange,
   onAddOption,
+  onRemoveOption,
   optionName,
   optionPrice,
   onOptionNameChange,
@@ -70,9 +71,7 @@ export function ModifierGroupModal({
       optionPrice={optionPrice}
       onOptionPriceChange={onOptionPriceChange}
       onAddOption={onAddOption}
-        onToggleOptionActive={(_index) => {
-        // Active toggle not supported in formData - ignore
-      }}
+      onRemoveOption={onRemoveOption}
       onClose={onClose}
       onSubmit={onSave}
     />

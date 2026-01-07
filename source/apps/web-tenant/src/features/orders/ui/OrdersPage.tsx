@@ -248,7 +248,7 @@ export function OrdersPage() {
       {/* Cancel Alert */}
       {showCancelAlert && (
         <div className="fixed top-6 right-6 z-50 animate-fade-in">
-          <Alert variant="success" className="shadow-lg">
+          <Alert variant="default" className="shadow-lg">
             <AlertDescription>
               {cancelAlertMessage}
             </AlertDescription>

@@ -15,6 +15,7 @@ export class MockStaffAdapter implements IStaffAdapter {
       label: 'Admin',
       description: 'Full access to all features, settings, and reports',
       color: 'purple',
+      bg: 'bg-purple-50',
     },
     {
       role: 'kitchen' as StaffRole,
@@ -22,6 +23,7 @@ export class MockStaffAdapter implements IStaffAdapter {
       label: 'Kitchen Staff',
       description: 'Access to KDS, order preparation and kitchen workflows',
       color: 'orange',
+      bg: 'bg-orange-50',
     },
     {
       role: 'waiter' as StaffRole,
@@ -29,6 +31,7 @@ export class MockStaffAdapter implements IStaffAdapter {
       label: 'Waiter/Server',
       description: 'Access to service board, orders, and table management',
       color: 'blue',
+      bg: 'bg-blue-50',
     },
   ];
 

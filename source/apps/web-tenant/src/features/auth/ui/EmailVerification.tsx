@@ -225,7 +225,7 @@ export function EmailVerification({
                   <Sparkles className="w-5 h-5 text-amber-500" />
                 </h2>
                 <p className="text-gray-600">
-                  Your email has been successfully verified. Let's set up your restaurant.
+                  Your email has been successfully verified. Let&apos;s set up your restaurant.
                 </p>
               </div>
 
@@ -313,7 +313,7 @@ export function EmailVerification({
               Verify Your Email
             </h1>
             <p className="text-gray-600">
-              We've sent a 6-digit code to
+              We&apos;ve sent a 6-digit code to
             </p>
             <p className="text-emerald-600 font-semibold mt-1">
               {userEmail}
@@ -381,7 +381,7 @@ export function EmailVerification({
             {/* Resend section */}
             <div className="text-center space-y-2">
               <p className="text-sm text-gray-600">
-                Didn't receive a code?
+                Didn&apos;t receive a code?
               </p>
               {resendCooldown > 0 ? (
                 <p className="text-sm text-gray-500">

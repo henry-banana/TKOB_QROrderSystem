@@ -1,6 +1,7 @@
 /**
- * Waiter Service Board - Order Card Components
- * WaiterOrderCard, WaiterOrderItemList
+ * Waiter Order Card Component
+ * Display order with status-based actions
+ * Presentational only - accepts props, no hooks or data access
  */
 
 'use client';
@@ -9,72 +10,10 @@ import React from 'react';
 import { Card, Badge } from '@/shared/components';
 import { StatusPill, PAYMENT_STATUS_CONFIG } from '@/shared/patterns';
 import { Clock, ChevronDown, ChevronUp } from 'lucide-react';
-import type { ServiceOrder, OrderStatus, OrderItem } from '../types';
-import { ORDER_ACTION_CONFIG, BUTTON_HEIGHT } from '../constants';
+import type { ServiceOrder, OrderStatus } from '../../../model/types';
+import { ORDER_ACTION_CONFIG, BUTTON_HEIGHT } from '../../../model/constants';
+import { OrderItemList } from './OrderItemList';
 
-/**
- * WaiterOrderItemList Props
- */
-interface WaiterOrderItemListProps {
-  items: OrderItem[];
-  isCollapsed?: boolean;
-}
-
-/**
- * WaiterOrderItemList Component
- * Display order items with modifiers
- */
-export function WaiterOrderItemList({ items, isCollapsed = false }: WaiterOrderItemListProps) {
-  if (isCollapsed) {
-    return (
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <p className="text-text-secondary text-[13px] font-semibold uppercase tracking-wide">
-            Items ({items.length})
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <p className="text-text-secondary text-[13px] font-semibold uppercase tracking-wide">
-        Items ({items.length})
-      </p>
-      <div className="flex flex-col gap-2">
-        {items.map((item, index) => (
-          <div key={index} className="flex items-start gap-2">
-            {/* Quantity Badge */}
-            <span className="text-text-secondary text-[13px] font-semibold">
-              {item.quantity}×
-            </span>
-
-            {/* Item Details */}
-            <div className="flex-1">
-              {/* Item Name */}
-              <p className="text-text-primary text-[13px] font-medium">
-                {item.name}
-              </p>
-
-              {/* Modifiers */}
-              {item.modifiers && item.modifiers.length > 0 && (
-                <div className="flex flex-col gap-0.5 mt-0.5">
-                  {item.modifiers.map((modifier, modIndex) => (
-                    <div key={modIndex} className="flex items-center gap-1.5 text-text-tertiary">
-                      <div className="w-1 h-1 bg-text-tertiary rounded-full" />
-                      <span className="text-[11px] italic">{modifier}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 /**
  * WaiterOrderCard Props
@@ -161,7 +100,7 @@ export function WaiterOrderCard({
         </div>
 
         {/* Items List */}
-        <WaiterOrderItemList
+        <OrderItemList
           items={order.items}
           isCollapsed={activeTab === 'preparing' && !isExpanded}
         />

@@ -5,12 +5,9 @@ import { Toast } from '@/shared/components/Toast';
 import { useKdsController } from '../../hooks';
 
 // Import UI components
-import {
-  KdsHeaderBar,
-  KdsSummaryPills,
-  KdsColumn,
-  KdsEmptyColumn,
-} from '../KdsComponents';
+import { KdsHeaderSection as KdsHeaderBar } from '../components/sections/KdsHeaderSection';
+import { KdsSummarySection as KdsSummaryPills } from '../components/sections/KdsSummarySection';
+import { KdsColumn, KdsEmptyColumn } from '../components/sections/KdsColumnSection';
 import { KdsTicketCard } from '../components/cards/KdsTicketCard';
 
 // Import model

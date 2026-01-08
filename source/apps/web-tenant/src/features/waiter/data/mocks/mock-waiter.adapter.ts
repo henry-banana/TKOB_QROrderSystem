@@ -2,7 +2,7 @@
  * Waiter Mock Adapter
  */
 
-import { MOCK_SERVICE_ORDERS } from '../model/constants';
+import { MOCK_SERVICE_ORDERS } from './mock-waiter.data';
 
 export const waiterMock = {
   async getServiceOrders() {

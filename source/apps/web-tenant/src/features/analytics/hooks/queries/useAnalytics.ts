@@ -4,8 +4,8 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { analyticsAdapter } from '../data/factory';
-import type { TimeRange } from '../model/types';
+import { analyticsAdapter } from '../../data/factory';
+import type { TimeRange } from '../../model/types';
 
 export function useOrdersData(range: TimeRange) {
   return useQuery({

@@ -3,7 +3,7 @@
  * Barrel exports for data adapters
  */
 
-export * from './analytics-adapter.interface';
-export * from './mock-analytics.adapter';
-export * from './api-analytics.adapter';
+export * from './adapter.interface';
+export * from './mocks/mock-analytics.adapter';
+export * from './api/api-analytics.adapter';
 export { analyticsAdapter } from './factory';

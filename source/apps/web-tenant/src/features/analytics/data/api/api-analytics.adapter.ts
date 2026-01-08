@@ -3,14 +3,14 @@
  * Real API implementation for analytics data
  */
 
-import type { IAnalyticsAdapter } from './analytics-adapter.interface';
+import type { IAnalyticsAdapter } from '../adapter.interface';
 import type {
   OrderDataPoint,
   PeakHourData,
   TopSellingItem,
   RevenueDataPoint,
   TimeRange,
-} from '../model/types';
+} from '../../model/types';
 
 export class ApiAnalyticsAdapter implements IAnalyticsAdapter {
   constructor(private apiUrl: string) {}

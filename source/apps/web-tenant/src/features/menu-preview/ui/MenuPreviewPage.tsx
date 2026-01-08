@@ -2,13 +2,13 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card } from '@/shared/components';
-import { useMenuItems } from '@/features/menu/hooks';
+import { useMenuPreviewController } from '@/features/menu/hooks';
 import { Search, ChevronRight } from 'lucide-react';
 
 // Customer-facing menu preview - no authentication required
 // Accessed via QR code scan: /menu or /menu?table=5
 export function MenuPreviewPage() {
-  const { data: menuItems = [] } = useMenuItems();
+  const { data: menuItems = [] } = useMenuPreviewController();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 

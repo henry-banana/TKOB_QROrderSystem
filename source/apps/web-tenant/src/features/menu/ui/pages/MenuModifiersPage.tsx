@@ -3,13 +3,8 @@
 import React, { useState, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-// Import feature hooks
-import {
-  useModifiers,
-  useCreateModifier,
-  useUpdateModifier,
-  useDeleteModifier,
-} from '../../hooks';
+// Import feature controllers
+import { useMenuModifiersController } from '../../hooks';
 import { getModifierGroupControllerFindAllQueryKey } from '@/services/generated/menu-modifiers/menu-modifiers';
 
 // Import extracted components
@@ -66,61 +61,63 @@ export function MenuModifiersPage({ showHeader = true }: MenuModifiersPageProps)
     }
   }, [toast]);
 
-  // ========== API QUERIES ==========
-  const { data: groupsResponse, isLoading: groupsLoading } = useModifiers({ 
-    activeOnly: false 
+  // ========== CONTROLLER (Queries + Mutations) ==========
+  const modifiersController = useMenuModifiersController({
+    query: { activeOnly: false },
+    createOptions: {
+      mutation: {
+        onSuccess: async () => {
+          await queryClient.refetchQueries({
+            queryKey: getModifierGroupControllerFindAllQueryKey({ activeOnly: false }),
+          });
+          setShowCreateModal(false);
+          setToast({ message: 'Modifier group created successfully', type: 'success' });
+          resetForm();
+        },
+        onError: () => {
+          setToast({ message: 'Failed to create modifier group', type: 'error' });
+        },
+      },
+    },
+    updateOptions: {
+      mutation: {
+        onSuccess: async () => {
+          await queryClient.refetchQueries({
+            queryKey: getModifierGroupControllerFindAllQueryKey({ activeOnly: false }),
+          });
+          setShowEditModal(false);
+          setEditingGroup(null);
+          setToast({ message: 'Modifier group updated successfully', type: 'success' });
+          resetForm();
+        },
+        onError: () => {
+          setToast({ message: 'Failed to update modifier group', type: 'error' });
+        },
+      },
+    },
+    deleteOptions: {
+      mutation: {
+        onSuccess: async () => {
+          await queryClient.refetchQueries({
+            queryKey: getModifierGroupControllerFindAllQueryKey({ activeOnly: false }),
+          });
+          setShowDeleteDialog(false);
+          setDeletingGroup(null);
+          setToast({ message: 'Modifier group deleted successfully', type: 'success' });
+        },
+        onError: () => {
+          setToast({ message: 'Failed to delete modifier group', type: 'error' });
+        },
+      },
+    },
   });
+
+  const { data: groupsResponse, isLoading: groupsLoading } = modifiersController.modifiersQuery;
   const groups = groupsResponse || [];
 
-  // ========== MUTATIONS ==========
-  const createGroupMutation = useCreateModifier({
-    mutation: {
-      onSuccess: async () => {
-        await queryClient.refetchQueries({ 
-          queryKey: getModifierGroupControllerFindAllQueryKey({ activeOnly: false }) 
-        });
-        setShowCreateModal(false);
-        setToast({ message: 'Modifier group created successfully', type: 'success' });
-        resetForm();
-      },
-      onError: () => {
-        setToast({ message: 'Failed to create modifier group', type: 'error' });
-      },
-    },
-  });
-
-  const updateGroupMutation = useUpdateModifier({
-    mutation: {
-      onSuccess: async () => {
-        await queryClient.refetchQueries({ 
-          queryKey: getModifierGroupControllerFindAllQueryKey({ activeOnly: false }) 
-        });
-        setShowEditModal(false);
-        setEditingGroup(null);
-        setToast({ message: 'Modifier group updated successfully', type: 'success' });
-        resetForm();
-      },
-      onError: () => {
-        setToast({ message: 'Failed to update modifier group', type: 'error' });
-      },
-    },
-  });
-
-  const deleteGroupMutation = useDeleteModifier({
-    mutation: {
-      onSuccess: async () => {
-        await queryClient.refetchQueries({ 
-          queryKey: getModifierGroupControllerFindAllQueryKey({ activeOnly: false }) 
-        });
-        setShowDeleteDialog(false);
-        setDeletingGroup(null);
-        setToast({ message: 'Modifier group deleted successfully', type: 'success' });
-      },
-      onError: () => {
-        setToast({ message: 'Failed to delete modifier group', type: 'error' });
-      },
-    },
-  });
+  const createGroupMutation = modifiersController.createModifier;
+  const updateGroupMutation = modifiersController.updateModifier;
+  const deleteGroupMutation = modifiersController.deleteModifier;
 
   // ========== HELPER FUNCTIONS ==========
   const resetForm = () => {

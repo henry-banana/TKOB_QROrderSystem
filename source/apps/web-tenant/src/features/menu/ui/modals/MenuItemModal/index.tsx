@@ -2,7 +2,7 @@ import React from 'react';
 import { X } from 'lucide-react';
 import type { MenuItemFormData, ModalMode, Category } from '../../../model/types';
 import type { ModifierGroup } from '../../../model/modifiers';
-import { useItemPhotos, useSetPrimaryPhoto } from '../../../hooks';
+import { useMenuItemPhotosController } from '../../../hooks';
 import { PhotosSection } from './PhotosSection';
 import { DetailsFields } from './DetailsFields';
 import { PricingFields } from './PricingFields';
@@ -34,11 +34,13 @@ export function MenuItemModal({
   onFormChange,
   isSaving,
 }: MenuItemModalProps) {
-  const { data: existingPhotos = [] } = useItemPhotos(itemId || '', {
-    enabled: isOpen && mode === 'edit' && !!itemId,
+  const { itemPhotosQuery, setPrimaryPhotoMutation: setPhotoMutation } = useMenuItemPhotosController({
+    itemId,
+    isOpen,
+    mode,
   });
 
-  const setPhotoMutation = useSetPrimaryPhoto();
+  const { data: existingPhotos = [] } = itemPhotosQuery;
 
   const handleSetPrimaryPhoto = async (photoId: string) => {
     if (!itemId) return;

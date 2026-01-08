@@ -12,7 +12,7 @@ export { MenuModifiersPage } from './ui/pages/MenuModifiersPage';
 // Components
 export { MenuTabs } from './ui/MenuTabs';
 
-// Hooks (React Query)
+// Hooks (controllers only)
 export * from './hooks';
 
 // Model (types & constants)

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
-import { CURRENCY_CONFIG } from '@/config/currency';
+import { CURRENCY_CONFIG } from '@/shared/config';
 
 interface FormOption {
   name: string;

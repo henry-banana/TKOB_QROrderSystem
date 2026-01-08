@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
-import { useCategory } from '../../hooks';
+import { useCategoryModalController } from '../../hooks';
 
 interface CategoryModalProps {
   isOpen: boolean;
@@ -35,8 +35,10 @@ export function CategoryModal({
   onActiveChange,
   isSaving,
 }: CategoryModalProps) {
-  const { data: freshCategoryData } = useCategory(categoryId || '', {
-    enabled: isOpen && mode === 'edit' && !!categoryId,
+  const { data: freshCategoryData } = useCategoryModalController({
+    categoryId,
+    isOpen,
+    mode,
   });
 
   useEffect(() => {

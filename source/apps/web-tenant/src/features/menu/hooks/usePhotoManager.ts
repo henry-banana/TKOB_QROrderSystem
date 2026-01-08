@@ -1,6 +1,6 @@
 'use client';
 
-import { useDeletePhoto, useUploadPhoto } from './index';
+import { useDeletePhoto, useUploadPhoto } from './queries/photos';
 import type { MenuItemFormData } from '../model/types';
 
 export function usePhotoManager() {

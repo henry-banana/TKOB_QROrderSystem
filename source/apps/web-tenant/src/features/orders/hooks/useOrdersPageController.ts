@@ -5,8 +5,8 @@
  */
 
 import { useState, useCallback } from 'react';
-import { Order, OrderFilters } from './types';
-import { INITIAL_ORDERS } from './constants';
+import { Order, OrderFilters } from '../model/types';
+import { INITIAL_ORDERS } from '../model/constants';
 
 /**
  * useOrdersData

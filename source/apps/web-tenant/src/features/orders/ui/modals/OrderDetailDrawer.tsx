@@ -9,8 +9,8 @@
 import React, { useEffect } from 'react';
 import { Card } from '@/shared/components';
 import { StatusPill, ORDER_STATUS_CONFIG, PAYMENT_STATUS_CONFIG } from '@/shared/patterns';
-import { Order } from '../types';
-import { OrderTimeline, OrderItemsList, DrawerHeader, DrawerActions } from './OrderComponents';
+import { Order } from '../../model/types';
+import { OrderTimeline, OrderItemsList, DrawerHeader, DrawerActions } from '../components';
 
 interface OrderDetailDrawerProps {
   isOpen: boolean;

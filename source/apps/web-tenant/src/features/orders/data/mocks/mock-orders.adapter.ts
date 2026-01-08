@@ -3,8 +3,8 @@
  * Mock data for development/testing
  */
 
-import { INITIAL_ORDERS } from '../model/constants';
-import type { Order } from '../model/types';
+import { INITIAL_ORDERS } from '../../model/constants';
+import type { Order } from '../../model/types';
 
 export const ordersMock = {
   async getOrders(): Promise<Order[]> {

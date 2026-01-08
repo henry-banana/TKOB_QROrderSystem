@@ -9,7 +9,6 @@ import React from 'react';
 import { Users, MapPin, Edit, QrCode } from 'lucide-react';
 import { Card } from '@/shared/components';
 import { StatusPill, TABLE_STATUS_CONFIG } from '@/shared/patterns';
-import { ZONE_LABELS } from '@/features/tables/model/constants';
 import type { Table } from '@/features/tables/model/types';
 
 interface TableCardProps {
@@ -21,10 +20,10 @@ interface TableCardProps {
 export function TableCard({ table, onEdit, onViewQR }: TableCardProps) {
   return (
     <Card
-      className="p-5 sm:p-6 hover-lift transition-all cursor-pointer border-2 border-default hover:border-accent-500"
+      className="p-5 sm:p-6 hover-lift transition-all cursor-pointer border-2 border-default hover:border-accent-500 flex flex-col h-full"
       onClick={() => onViewQR(table)}
     >
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 flex-1">
         {/* Header */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
@@ -43,7 +42,7 @@ export function TableCard({ table, onEdit, onViewQR }: TableCardProps) {
               e.stopPropagation();
               onEdit(table);
             }}
-            className="p-2 hover:bg-elevated rounded-lg transition-colors shrink-0"
+            className="p-2 hover:bg-elevated rounded-lg transition-colors cursor-pointer shrink-0"
           >
             <Edit className="w-5 h-5 text-text-tertiary" />
           </button>
@@ -60,7 +59,7 @@ export function TableCard({ table, onEdit, onViewQR }: TableCardProps) {
           <div className="flex items-center gap-2 text-text-secondary">
             <MapPin className="w-4 h-4 shrink-0" />
             <span style={{ fontSize: 'clamp(13px, 3vw, 15px)', fontWeight: 500 }}>
-              {ZONE_LABELS[table.zone]}
+              {table.location}
             </span>
           </div>
         </div>
@@ -71,34 +70,34 @@ export function TableCard({ table, onEdit, onViewQR }: TableCardProps) {
             {table.description}
           </p>
         )}
+      </div>
 
-        {/* Actions */}
-        <div className="pt-3 border-t border-default flex gap-2">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onViewQR(table);
-            }}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 transition-colors rounded-lg"
-            style={{ fontSize: 'clamp(12px, 3vw, 14px)', fontWeight: 600 }}
-          >
-            <QrCode className="w-4 h-4" />
-            <span className="hidden sm:inline">View QR</span>
-            <span className="sm:hidden">QR</span>
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(table);
-            }}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-elevated hover:bg-secondary text-text-secondary transition-colors rounded-lg"
-            style={{ fontSize: 'clamp(12px, 3vw, 14px)', fontWeight: 600 }}
-          >
-            <Edit className="w-4 h-4" />
-            <span className="hidden sm:inline">Edit</span>
-            <span className="sm:hidden">Edit</span>
-          </button>
-        </div>
+      {/* Actions - pushed to bottom */}
+      <div className="pt-3 border-t border-default flex gap-2 mt-auto">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onViewQR(table);
+          }}
+          className="flex-1 flex items-center justify-center gap-2 px-3 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 transition-colors cursor-pointer rounded-lg h-9"
+          style={{ fontSize: 'clamp(12px, 3vw, 14px)', fontWeight: 600, lineHeight: '1.2' }}
+        >
+          <QrCode className="w-4 h-4 shrink-0" />
+          <span className="hidden sm:inline">View QR</span>
+          <span className="sm:hidden">QR</span>
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(table);
+          }}
+          className="flex-1 flex items-center justify-center gap-2 px-3 bg-elevated hover:bg-secondary text-text-secondary transition-colors cursor-pointer rounded-lg h-9"
+          style={{ fontSize: 'clamp(12px, 3vw, 14px)', fontWeight: 600, lineHeight: '1.2' }}
+        >
+          <Edit className="w-4 h-4 shrink-0" />
+          <span className="hidden sm:inline">Edit</span>
+          <span className="sm:hidden">Edit</span>
+        </button>
       </div>
     </Card>
   );

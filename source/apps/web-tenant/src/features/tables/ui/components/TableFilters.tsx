@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { Select } from '@/shared/components';
-import { STATUS_FILTER_OPTIONS, ZONE_FILTER_OPTIONS, SORT_OPTIONS } from '@/features/tables/model/constants';
+import { STATUS_FILTER_OPTIONS, SORT_OPTIONS } from '@/features/tables/model/constants';
 import type { SortOption } from '@/features/tables/model/types';
 
 interface TableFiltersProps {
@@ -17,7 +17,10 @@ interface TableFiltersProps {
   onStatusChange: (status: string) => void;
   onZoneChange: (zone: string) => void;
   onSortChange: (sort: SortOption) => void;
+  activeOnly?: boolean;
+  onActiveOnlyChange?: (value: boolean) => void;
   onClearFilters: () => void;
+  locations?: string[];
 }
 
 export function TableFilters({
@@ -27,9 +30,14 @@ export function TableFilters({
   onStatusChange,
   onZoneChange,
   onSortChange,
+  activeOnly = false,
+  onActiveOnlyChange,
   onClearFilters,
+  locations = [],
 }: TableFiltersProps) {
-  const hasActiveFilters = selectedStatus !== 'All' || selectedZone !== 'All Locations';
+  const hasActiveFilters = selectedStatus !== 'All' || selectedZone !== 'All Locations' || !!activeOnly;
+
+  const zoneOptions = ['All Locations', ...locations];
 
   return (
     <div className="flex flex-col md:flex-row lg:flex-nowrap md:items-center gap-3 md:gap-4 mb-4">
@@ -50,7 +58,7 @@ export function TableFilters({
       {/* Zone Filter */}
       <div className="flex-1">
         <Select
-          options={ZONE_FILTER_OPTIONS.map((option) => ({
+          options={zoneOptions.map((option) => ({
             value: option,
             label: option,
           }))}
@@ -75,11 +83,23 @@ export function TableFilters({
         />
       </div>
 
+      {/* Active Only Toggle */}
+      <div className="flex items-center gap-2">
+        <label className="flex items-center gap-2 text-[clamp(13px,4vw,15px)] font-medium text-text-secondary">
+          <input
+            type="checkbox"
+            checked={!!activeOnly}
+            onChange={(e) => onActiveOnlyChange && onActiveOnlyChange(e.target.checked)}
+          />
+          Active Only
+        </label>
+      </div>
+
       {/* Clear Filters */}
       {hasActiveFilters && (
         <button
           onClick={onClearFilters}
-          className="px-4 sm:px-5 py-3 bg-elevated hover:bg-secondary text-text-secondary transition-colors whitespace-nowrap rounded-lg"
+          className="px-4 sm:px-5 py-3 bg-elevated hover:bg-secondary text-text-secondary transition-colors whitespace-nowrap cursor-pointer rounded-lg"
           style={{ fontSize: 'clamp(13px, 4vw, 15px)', fontWeight: 600, height: '48px' }}
         >
           Clear Filters

@@ -10,6 +10,8 @@ import type {
   TableResponseDto,
   TableControllerFindAllParams,
 } from '@/services/generated/models';
+import type { QRDownloadFormat } from '@/features/tables/model/types';
+import { env } from '@/shared/config/env';
 import {
   tableControllerCreate,
   tableControllerFindAll,
@@ -23,6 +25,11 @@ import {
 } from '@/services/generated/tables/tables';
 
 export class TablesApiAdapter implements ITablesAdapter {
+  private getAuthToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    return localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+  }
+
   async listTables(params?: TableControllerFindAllParams): Promise<TableResponseDto[]> {
     console.log('🌐 [API Adapter] Calling tableControllerFindAll with params:', params);
     try {
@@ -107,6 +114,45 @@ export class TablesApiAdapter implements ITablesAdapter {
       totalProcessed: result.totalProcessed,
       generatedAt: result.regeneratedAt,
     };
+  }
+
+  async downloadQR(id: string, format: QRDownloadFormat): Promise<Blob> {
+    const apiUrl = env.apiUrl;
+    if (!apiUrl) {
+      throw new Error('API URL not configured. Please check NEXT_PUBLIC_API_URL in .env');
+    }
+
+    const token = this.getAuthToken();
+    const response = await fetch(
+      `${apiUrl}/api/v1/admin/tables/${id}/qr/download?format=${format}`,
+      {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response.blob();
+  }
+
+  async downloadAllQR(): Promise<Blob> {
+    const apiUrl = env.apiUrl;
+    if (!apiUrl) {
+      throw new Error('API URL not configured. Please check NEXT_PUBLIC_API_URL in .env');
+    }
+
+    const token = this.getAuthToken();
+    const response = await fetch(`${apiUrl}/api/v1/admin/tables/qr/download-all`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    }
+
+    return response.blob();
   }
 
   async getLocations(): Promise<string[]> {

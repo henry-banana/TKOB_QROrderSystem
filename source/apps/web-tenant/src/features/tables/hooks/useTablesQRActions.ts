@@ -11,7 +11,8 @@
 
 import { useRef, useState } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { useRegenerateQR } from './queries/useTables';
+import { useRegenerateAllQR, useRegenerateQR } from './queries/useTables';
+import { tablesAdapter } from '@/features/tables/data';
 import type { Table, QRDownloadFormat } from '@/features/tables/model/types';
 
 interface ShowToastFn {
@@ -33,6 +34,7 @@ export function useTablesQRActions(
 
   const qrPrintRef = useRef<HTMLDivElement>(null);
   const regenerateQRMutation = useRegenerateQR();
+  const regenerateAllQRMutation = useRegenerateAllQR();
 
   // ============================================================================
   // EVENT HANDLERS - QR Operations
@@ -64,34 +66,7 @@ export function useTablesQRActions(
 
     setIsDownloadingQR(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!apiUrl) {
-        throw new Error(
-          'API URL not configured. Please check NEXT_PUBLIC_API_URL in .env file'
-        );
-      }
-
-      console.log(`📥 [GET /tables/:id/qr/download] Request:`, {
-        id: selectedTable.id,
-        format,
-      });
-
-      const token =
-        localStorage.getItem('authToken') ||
-        sessionStorage.getItem('authToken');
-      const response = await fetch(
-        `${apiUrl}/api/v1/admin/tables/${selectedTable.id}/qr/download?format=${format}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok)
-        throw new Error(`Download failed: ${response.statusText}`);
-
-      const blob = await response.blob();
+      const blob = await tablesAdapter.downloadQR(selectedTable.id, format);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -119,31 +94,7 @@ export function useTablesQRActions(
   const handleDownloadAll = async () => {
     setIsDownloadingAll(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!apiUrl) {
-        throw new Error(
-          'API URL not configured. Please check NEXT_PUBLIC_API_URL in .env file'
-        );
-      }
-
-      console.log('📥 [GET /tables/qr/download-all] Request');
-
-      const token =
-        localStorage.getItem('authToken') ||
-        sessionStorage.getItem('authToken');
-      const response = await fetch(
-        `${apiUrl}/api/v1/admin/tables/qr/download-all`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok)
-        throw new Error(`Download failed: ${response.statusText}`);
-
-      const blob = await response.blob();
+      const blob = await tablesAdapter.downloadAllQR();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -171,34 +122,7 @@ export function useTablesQRActions(
   const handleBulkRegenerateQR = async () => {
     setIsBulkRegenLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!apiUrl) {
-        throw new Error(
-          'API URL not configured. Please check NEXT_PUBLIC_API_URL in .env file'
-        );
-      }
-
-      console.log('🔄 [POST /tables/qr/regenerate-all] Request');
-
-      const token =
-        localStorage.getItem('authToken') ||
-        sessionStorage.getItem('authToken');
-      const response = await fetch(
-        `${apiUrl}/api/v1/admin/tables/qr/regenerate-all`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok)
-        throw new Error(`Regeneration failed: ${response.statusText}`);
-
-      const result = await response.json();
-      console.log('✅ [POST /tables/qr/regenerate-all] Response:', result);
+      await regenerateAllQRMutation.mutateAsync();
 
       showToast('All QR codes regenerated successfully', 'success');
     } catch (error: any) {

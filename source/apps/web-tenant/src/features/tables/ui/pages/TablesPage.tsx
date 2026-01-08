@@ -68,7 +68,7 @@ export function TablesPage() {
                 <button
                   onClick={() => modals.setIsBulkRegenOpen(true)}
                   disabled={loading.isBulkRegenLoading}
-                  className="flex items-center justify-center md:justify-start gap-2 px-4 sm:px-5 py-3 h-12 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-blue-500 text-gray-600 hover:text-blue-500 transition-all flex-1 md:flex-none disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-[clamp(13px,4vw,15px)] font-semibold"
+                  className="flex items-center justify-center md:justify-start gap-2 px-4 sm:px-5 py-3 h-12 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-blue-500 text-gray-600 hover:text-blue-500 transition-all flex-1 md:flex-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer rounded-lg text-[clamp(13px,4vw,15px)] font-semibold"
                 >
                   {loading.isBulkRegenLoading ? (
                     <>
@@ -86,7 +86,7 @@ export function TablesPage() {
                 <button
                   onClick={handlers.downloadAll}
                   disabled={loading.isDownloadingAll}
-                  className="flex items-center justify-center md:justify-start gap-2 px-4 sm:px-5 py-3 h-12 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-emerald-500 text-gray-600 hover:text-emerald-500 transition-all flex-1 md:flex-none disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-[clamp(13px,4vw,15px)] font-semibold"
+                  className="flex items-center justify-center md:justify-start gap-2 px-4 sm:px-5 py-3 h-12 bg-white hover:bg-gray-50 border-2 border-gray-200 hover:border-emerald-500 text-gray-600 hover:text-emerald-500 transition-all flex-1 md:flex-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer rounded-lg text-[clamp(13px,4vw,15px)] font-semibold"
                 >
                   {loading.isDownloadingAll ? (
                     <>
@@ -106,7 +106,7 @@ export function TablesPage() {
             <button
               onClick={handlers.openAddModal}
               disabled={loading.isCreating}
-              className="flex items-center justify-center md:justify-start gap-2 px-4 sm:px-5 py-3 h-12 bg-emerald-500 hover:bg-emerald-600 text-white transition-all flex-1 md:flex-none disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-[clamp(13px,4vw,15px)] font-semibold shadow-md hover:shadow-lg"
+              className="flex items-center justify-center md:justify-start gap-2 px-4 sm:px-5 py-3 h-12 bg-emerald-500 hover:bg-emerald-600 text-white transition-all flex-1 md:flex-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer rounded-lg text-[clamp(13px,4vw,15px)] font-semibold shadow-md hover:shadow-lg"
             >
               {loading.isCreating ? (
                 <>
@@ -134,9 +134,13 @@ export function TablesPage() {
           onStatusChange={filters.setSelectedStatus}
           onZoneChange={filters.setSelectedZone}
           onSortChange={filters.setSortOption}
+          activeOnly={filters.activeOnly}
+          onActiveOnlyChange={filters.setActiveOnly}
+          locations={filters.locations}
           onClearFilters={() => {
             filters.setSelectedStatus('All');
             filters.setSelectedZone('All Locations');
+            filters.setActiveOnly(false);
           }}
         />
         
@@ -149,7 +153,7 @@ export function TablesPage() {
         ) : (
           <TableGrid
             tables={tables}
-            onEdit={handlers.openEditModal}
+            onEdit={handlers.editTable}
             onViewQR={handlers.openQRModal}
           />
         )}
@@ -161,18 +165,19 @@ export function TablesPage() {
         onClose={handlers.closeAddModal}
         title="Add New Table"
         size="md"
+        disableBackdropClose={true}
         footer={
           <>
             <button
               onClick={handlers.closeAddModal}
-              className="flex-1 px-4 h-12 text-text-secondary transition-colors border border-default hover:bg-elevated text-[15px] font-semibold rounded-lg"
+              className="flex-1 px-4 h-12 text-text-secondary transition-colors border border-default hover:bg-elevated cursor-pointer text-[15px] font-semibold rounded-lg"
             >
               Cancel
             </button>
             <button
               onClick={handlers.createTable}
               disabled={loading.isCreating}
-              className="flex-1 px-4 h-12 bg-[rgb(var(--primary))] hover:bg-[rgb(var(--primary-600))] text-white transition-colors disabled:bg-neutral-300 disabled:cursor-not-allowed text-[15px] font-semibold rounded-lg"
+              className="flex-1 px-4 h-12 bg-[rgb(var(--primary))] hover:bg-[rgb(var(--primary-600))] text-white transition-colors disabled:bg-neutral-300 disabled:cursor-not-allowed cursor-pointer text-[15px] font-semibold rounded-lg"
             >
               {loading.isCreating ? 'Creating...' : 'Create Table'}
             </button>
@@ -184,6 +189,7 @@ export function TablesPage() {
           setFormData={setFormData}
           autoFocus={true}
           disableTableName={false}
+          locations={filters.locations}
         />
       </Modal>
       
@@ -193,18 +199,19 @@ export function TablesPage() {
         onClose={handlers.closeEditModal}
         title="Edit Table"
         size="md"
+        disableBackdropClose={true}
         footer={
           <>
             <button
               onClick={handlers.closeEditModal}
-              className="flex-1 px-4 h-12 text-text-secondary transition-colors border border-default hover:bg-elevated text-[15px] font-semibold rounded-lg"
+              className="flex-1 px-4 h-12 text-text-secondary transition-colors border border-default hover:bg-elevated cursor-pointer text-[15px] font-semibold rounded-lg"
             >
               Cancel
             </button>
             <button
               onClick={handlers.updateTable}
               disabled={loading.isUpdating}
-              className="flex-1 px-4 h-12 bg-[rgb(var(--primary))] hover:bg-[rgb(var(--primary-600))] text-white transition-colors disabled:bg-neutral-300 disabled:cursor-not-allowed text-[15px] font-semibold rounded-lg"
+              className="flex-1 px-4 h-12 bg-[rgb(var(--primary))] hover:bg-[rgb(var(--primary-600))] text-white transition-colors disabled:bg-neutral-300 disabled:cursor-not-allowed cursor-pointer text-[15px] font-semibold rounded-lg"
             >
               {loading.isUpdating ? 'Updating...' : 'Save Changes'}
             </button>
@@ -216,6 +223,7 @@ export function TablesPage() {
           setFormData={setFormData}
           autoFocus={false}
           disableTableName={false}
+          locations={filters.locations}
         />
       </Modal>
       

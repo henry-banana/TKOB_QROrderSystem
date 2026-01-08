@@ -9,6 +9,7 @@ import type {
   TableResponseDto,
   TableControllerFindAllParams,
 } from '@/services/generated/models';
+import type { QRDownloadFormat } from '../model/types';
 
 export interface ITablesAdapter {
   /**
@@ -62,6 +63,16 @@ export interface ITablesAdapter {
     totalProcessed: number;
     generatedAt: string;
   }>;
+
+  /**
+   * Download a single table QR code
+   */
+  downloadQR(id: string, format: QRDownloadFormat): Promise<Blob>;
+
+  /**
+   * Download all QR codes as an archive
+   */
+  downloadAllQR(): Promise<Blob>;
 
   /**
    * Get distinct locations for filter dropdown

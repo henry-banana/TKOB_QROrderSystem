@@ -10,6 +10,7 @@ import type {
   TableResponseDto,
   TableControllerFindAllParams,
 } from '@/services/generated/models';
+import type { QRDownloadFormat } from '../../model/types';
 
 /**
  * Simulate network delay (200-500ms)
@@ -25,7 +26,7 @@ const mockTables: TableResponseDto[] = [
     tenantId: 'tenant-001',
     tableNumber: 'Table 1',
     capacity: 4,
-    location: 'Main Hall',
+    location: 'Indoor',
     description: 'Near window',
     status: 'AVAILABLE',
     active: true,
@@ -40,8 +41,8 @@ const mockTables: TableResponseDto[] = [
     tenantId: 'tenant-001',
     tableNumber: 'Table 2',
     capacity: 2,
-    location: 'Main Hall',
-    description: '',
+    location: 'Indoor',
+    description: 'Cozy corner',
     status: 'OCCUPIED',
     active: true,
     displayOrder: 2,
@@ -53,16 +54,166 @@ const mockTables: TableResponseDto[] = [
   {
     id: 'table-3',
     tenantId: 'tenant-001',
-    tableNumber: 'VIP 1',
-    capacity: 8,
-    location: 'VIP Room',
-    description: 'Private room',
-    status: 'RESERVED',
+    tableNumber: 'Table 3',
+    capacity: 4,
+    location: 'Indoor',
+    description: 'Center table',
+    status: 'AVAILABLE',
     active: true,
     displayOrder: 3,
     qrCodeUrl: '/api/v1/admin/tables/table-3/qr/download',
     qrGeneratedAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'table-4',
+    tenantId: 'tenant-001',
+    tableNumber: 'Table 4',
+    capacity: 6,
+    location: 'Indoor',
+    description: 'Large family table',
+    status: 'RESERVED',
+    active: true,
+    displayOrder: 4,
+    qrCodeUrl: '/api/v1/admin/tables/table-4/qr/download',
+    qrGeneratedAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'table-5',
+    tenantId: 'tenant-001',
+    tableNumber: 'Table 5',
+    capacity: 2,
+    location: 'Outdoor',
+    description: 'Outdoor seating',
+    status: 'AVAILABLE',
+    active: true,
+    displayOrder: 5,
+    qrCodeUrl: '/api/v1/admin/tables/table-5/qr/download',
+    qrGeneratedAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'table-6',
+    tenantId: 'tenant-001',
+    tableNumber: 'Table 6',
+    capacity: 4,
+    location: 'Outdoor',
+    description: 'Garden view',
+    status: 'OCCUPIED',
+    active: true,
+    displayOrder: 6,
+    qrCodeUrl: '/api/v1/admin/tables/table-6/qr/download',
+    qrGeneratedAt: new Date().toISOString(),
     createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'table-7',
+    tenantId: 'tenant-001',
+    tableNumber: 'Table 7',
+    capacity: 2,
+    location: 'VIP Room',
+    description: 'High table',
+    status: 'AVAILABLE',
+    active: true,
+    displayOrder: 7,
+    qrCodeUrl: '/api/v1/admin/tables/table-7/qr/download',
+    qrGeneratedAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'table-8',
+    tenantId: 'tenant-001',
+    tableNumber: 'Table 8',
+    capacity: 2,
+    location: 'Outdoor',
+    description: 'High table',
+    status: 'OCCUPIED',
+    active: true,
+    displayOrder: 8,
+    qrCodeUrl: '/api/v1/admin/tables/table-8/qr/download',
+    qrGeneratedAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'table-9',
+    tenantId: 'tenant-001',
+    tableNumber: 'Table 9',
+    capacity: 8,
+    location: 'Patio',
+    description: 'Private room with projector',
+    status: 'RESERVED',
+    active: true,
+    displayOrder: 9,
+    qrCodeUrl: '/api/v1/admin/tables/table-9/qr/download',
+    qrGeneratedAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'table-10',
+    tenantId: 'tenant-001',
+    tableNumber: 'Table 10',
+    capacity: 6,
+    location: 'VIP Room',
+    description: 'Private room',
+    status: 'AVAILABLE',
+    active: true,
+    displayOrder: 10,
+    qrCodeUrl: '/api/v1/admin/tables/table-10/qr/download',
+    qrGeneratedAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'table-11',
+    tenantId: 'tenant-001',
+    tableNumber: 'Table 11',
+    capacity: 4,
+    location: 'Indoor',
+    description: '',
+    status: 'INACTIVE',
+    active: true,
+    displayOrder: 11,
+    qrCodeUrl: '/api/v1/admin/tables/table-11/qr/download',
+    qrGeneratedAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'table-12',
+    tenantId: 'tenant-001',
+    tableNumber: 'Table 12',
+    capacity: 2,
+    location: 'Outdoor',
+    description: 'Near entrance',
+    status: 'AVAILABLE',
+    active: false,
+    displayOrder: 12,
+    qrCodeUrl: '/api/v1/admin/tables/table-12/qr/download',
+    qrGeneratedAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'table-13',
+    tenantId: 'tenant-001',
+    tableNumber: 'Table 13',
+    capacity: 4,
+    location: 'Indoor',
+    description: 'private corner',
+    status: 'INACTIVE',
+    active: true,
+    displayOrder: 13,
+    qrCodeUrl: '/api/v1/admin/tables/table-13/qr/download',
+    qrGeneratedAt: new Date().toISOString(),
+    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date().toISOString(),
   },
 ];
@@ -82,6 +233,33 @@ export class TablesMockAdapter implements ITablesAdapter {
     }
     if (params?.location) {
       filtered = filtered.filter((t) => t.location === params.location);
+    }
+
+    // Apply sorting
+    if (params?.sortBy) {
+      const order = params.sortOrder === 'desc' ? -1 : 1;
+      filtered.sort((a, b) => {
+        switch (params!.sortBy) {
+          case 'tableNumber': {
+            // Use displayOrder for proper numeric sorting (already correctly ordered in mock data)
+            const av = Number(a.displayOrder ?? 0);
+            const bv = Number(b.displayOrder ?? 0);
+            return (av - bv) * order;
+          }
+          case 'capacity': {
+            const av = Number(a.capacity ?? 0);
+            const bv = Number(b.capacity ?? 0);
+            return (av - bv) * order;
+          }
+          case 'createdAt': {
+            const av = Date.parse(a.createdAt || '');
+            const bv = Date.parse(b.createdAt || '');
+            return (av - bv) * order;
+          }
+          default:
+            return 0;
+        }
+      });
     }
 
     return filtered;
@@ -242,5 +420,24 @@ export class TablesMockAdapter implements ITablesAdapter {
       totalProcessed: mockTables.length,
       generatedAt,
     };
+  }
+
+  async downloadQR(id: string, format: QRDownloadFormat): Promise<Blob> {
+    await fakeDelay();
+
+    const table = mockTables.find((t) => t.id === id);
+    if (!table) {
+      throw new Error('Table not found');
+    }
+
+    const mimeType = format === 'pdf' ? 'application/pdf' : 'image/png';
+    const content = `Mock QR for ${table.tableNumber} (${format})`;
+    return new Blob([content], { type: mimeType });
+  }
+
+  async downloadAllQR(): Promise<Blob> {
+    await fakeDelay();
+    const content = `Mock ZIP for ${mockTables.length} tables`;
+    return new Blob([content], { type: 'application/zip' });
   }
 }

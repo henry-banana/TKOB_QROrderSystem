@@ -16,9 +16,28 @@ interface TableFormFieldsProps {
   setFormData: (data: any) => void;
   autoFocus?: boolean;
   disableTableName?: boolean;
+  locations?: string[];
 }
 
-export function TableFormFields({ formData, setFormData, autoFocus = true, disableTableName = false }: TableFormFieldsProps) {
+export function TableFormFields({ formData, setFormData, autoFocus = true, disableTableName = false, locations = [] }: TableFormFieldsProps) {
+  // Create mapping from location display name to zone value
+  const locationToZoneMap: Record<string, string> = {
+    'Indoor': 'indoor',
+    'Outdoor': 'outdoor',
+    'Patio': 'patio',
+    'VIP Room': 'vip',
+  };
+
+  // Create reverse mapping from zone to location display name
+  const zoneToLocationMap: Record<string, string> = {
+    'indoor': 'Indoor',
+    'outdoor': 'Outdoor',
+    'patio': 'Patio',
+    'vip': 'VIP Room',
+  };
+
+  // Use provided locations, fallback to defaults if empty
+  const zoneOptions = locations.length > 0 ? locations : ['Indoor', 'Outdoor', 'Patio', 'VIP Room'];
   return (
     <>
       <div className="flex flex-col gap-2">
@@ -79,10 +98,14 @@ export function TableFormFields({ formData, setFormData, autoFocus = true, disab
             onChange={(e) => setFormData({ ...formData, zone: e.target.value })}
             className="w-full px-4 py-3 pr-10 border border-default bg-white text-text-primary focus:outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20 transition-all appearance-none rounded-[4px] h-12 text-[15px]"
           >
-            <option value="indoor">Indoor</option>
-            <option value="outdoor">Outdoor</option>
-            <option value="patio">Patio</option>
-            <option value="vip">VIP Room</option>
+            {zoneOptions.map((locationName) => {
+              const zoneValue = locationToZoneMap[locationName] || locationName.toLowerCase();
+              return (
+                <option key={zoneValue} value={zoneValue}>
+                  {locationName}
+                </option>
+              );
+            })}
           </select>
           <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-text-tertiary pointer-events-none" />
         </div>

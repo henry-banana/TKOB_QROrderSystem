@@ -32,18 +32,19 @@ export function StatusChangeModal({
       onClose={onClose}
       title={targetStatus === 'inactive' ? 'Deactivate Table?' : 'Reactivate Table?'}
       size="md"
+      disableBackdropClose={true}
       footer={
         <>
           <button
             onClick={onClose}
-            className="flex-1 px-4 text-text-secondary transition-colors border border-default hover:bg-elevated"
+            className="flex-1 px-4 text-text-secondary transition-colors border border-default hover:bg-elevated cursor-pointer"
             style={{ fontSize: '15px', fontWeight: 600, borderRadius: '4px', height: '48px' }}
           >
             Cancel
           </button>
           <button
             onClick={onConfirm}
-            className={`flex-1 px-4 text-white transition-colors ${
+            className={`flex-1 px-4 text-white transition-colors cursor-pointer ${
               targetStatus === 'inactive'
                 ? 'bg-amber-500 hover:bg-amber-600'
                 : 'bg-accent-500 hover:bg-accent-600'

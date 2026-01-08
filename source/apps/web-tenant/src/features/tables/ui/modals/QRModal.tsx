@@ -10,7 +10,6 @@ import { X, Download, Printer, RefreshCcw } from 'lucide-react';
 import QRCode from 'react-qr-code';
 import { Modal } from '@/shared/components/Modal';
 import { StatusPill, TABLE_STATUS_CONFIG } from '@/shared/patterns';
-import { ZONE_LABELS } from '@/features/tables/model/constants';
 import type { Table, QRDownloadFormat } from '@/features/tables/model/types';
 
 interface QRModalProps {
@@ -52,85 +51,80 @@ export function QRModal({
     ? `${process.env.NEXT_PUBLIC_CUSTOMER_APP_URL}/t/${table.qrToken}`
     : `${process.env.NEXT_PUBLIC_API_URL}/qr/${table.id}`;
 
+  // Header action buttons
+  const headerActions = (
+    <div className="flex items-center gap-1.5">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          if (table.status === 'inactive') {
+            onActivateTable();
+          } else {
+            onDeactivateTable();
+          }
+        }}
+        disabled={isUpdatingStatus}
+        title={table.status === 'inactive' ? 'Activate Table' : 'Deactivate Table'}
+        className={`flex items-center justify-center gap-1 px-2.5 py-1.5 border text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap ${
+          table.status === 'inactive'
+            ? 'bg-accent-50 hover:bg-accent-100 border-accent-300 text-accent-700 hover:text-accent-800'
+            : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-700 hover:text-amber-800'
+        }`}
+        style={{ borderRadius: '4px', fontWeight: 600 }}
+      >
+        {isUpdatingStatus ? (
+          <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
+        ) : table.status === 'inactive' ? (
+          <>
+            <span className="hidden sm:inline">Activate</span>
+            <span className="sm:hidden">On</span>
+          </>
+        ) : (
+          <>
+            <span className="hidden sm:inline">Deactivate</span>
+            <span className="sm:hidden">Off</span>
+          </>
+        )}
+      </button>
+      
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit();
+        }}
+        title="Edit Table"
+        className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-primary hover:bg-elevated border border-default text-text-secondary transition-colors cursor-pointer text-xs"
+        style={{ borderRadius: '4px', fontWeight: 600 }}
+      >
+        <span className="hidden sm:inline">Edit</span>
+        <span className="sm:hidden">✎</span>
+      </button>
+      
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onRegenerateQR();
+        }}
+        disabled={table.status === 'inactive' || isRegenerating}
+        title="Regenerate QR"
+        className="flex items-center justify-center gap-1 px-2.5 py-1.5 bg-primary hover:bg-elevated border border-default text-text-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer disabled:hover:bg-primary text-xs"
+        style={{ borderRadius: '4px', fontWeight: 600 }}
+      >
+        <RefreshCcw className={`w-3.5 h-3.5 ${isRegenerating ? 'animate-spin' : ''}`} />
+        <span className="hidden sm:inline">{isRegenerating ? 'Regenerating...' : 'Regen'}</span>
+      </button>
+    </div>
+  );
+
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title="QR Code Preview"
       size="lg"
+      disableBackdropClose={true}
+      headerActions={headerActions}
     >
-      {/* Header Actions */}
-      <div className="absolute top-4 sm:top-6 right-4 sm:right-6 flex flex-col md:flex-row md:items-center gap-2 z-10">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (table.status === 'inactive') {
-              onActivateTable();
-            } else {
-              onDeactivateTable();
-            }
-          }}
-          disabled={isUpdatingStatus}
-          className={`flex items-center justify-center md:justify-start gap-2 px-3 md:px-4 py-2 border text-text-secondary transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed ${
-            table.status === 'inactive'
-              ? 'bg-accent-50 hover:bg-accent-100 border-accent-300 text-accent-700 hover:text-accent-800'
-              : 'bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-700 hover:text-amber-800'
-          }`}
-          style={{ fontSize: 'clamp(12px, 3vw, 14px)', fontWeight: 600, borderRadius: '4px' }}
-        >
-          {isUpdatingStatus ? (
-            <>
-              <RefreshCcw className="w-4 h-4 shrink-0 animate-spin" />
-              <span className="hidden md:inline">Processing...</span>
-              <span className="md:hidden">...</span>
-            </>
-          ) : table.status === 'inactive' ? (
-            <>
-              <span className="hidden md:inline">Activate</span>
-              <span className="md:hidden">Activate</span>
-            </>
-          ) : (
-            <>
-              <span className="hidden md:inline">Deactivate</span>
-              <span className="md:hidden">Deactivate</span>
-            </>
-          )}
-        </button>
-        
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit();
-          }}
-          className="flex items-center justify-center md:justify-start gap-2 px-3 md:px-4 py-2 bg-primary hover:bg-elevated border border-default text-text-secondary transition-colors whitespace-nowrap"
-          style={{ fontSize: 'clamp(12px, 3vw, 14px)', fontWeight: 600, borderRadius: '4px' }}
-        >
-          <span className="hidden md:inline">Edit Table</span>
-          <span className="md:hidden">Edit</span>
-        </button>
-        
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRegenerateQR();
-          }}
-          disabled={table.status === 'inactive' || isRegenerating}
-          className="flex items-center justify-center md:justify-start gap-2 px-3 md:px-4 py-2 bg-primary hover:bg-elevated border border-default text-text-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary whitespace-nowrap"
-          style={{ fontSize: 'clamp(12px, 3vw, 14px)', fontWeight: 600, borderRadius: '4px' }}
-        >
-          <RefreshCcw className={`w-4 h-4 shrink-0 ${isRegenerating ? 'animate-spin' : ''}`} />
-          <span className="hidden md:inline">{isRegenerating ? 'Regenerating...' : 'Regenerate QR'}</span>
-          <span className="md:hidden">{isRegenerating ? 'Regen...' : 'Regen'}</span>
-        </button>
-        
-        <button
-          onClick={onClose}
-          className="p-2 hover:bg-elevated rounded-lg transition-colors self-end md:self-auto"
-        >
-          <X className="w-5 h-5 text-text-tertiary" />
-        </button>
-      </div>
-
       {/* Inactive Warning */}
       {table.status === 'inactive' && (
         <div className="p-4 bg-elevated border-2 border-default rounded-lg mb-4">
@@ -222,7 +216,7 @@ export function QRModal({
                 Location
               </p>
               <p className="text-text-primary" style={{ fontSize: '16px', fontWeight: 700 }}>
-                {ZONE_LABELS[table.zone]}
+                {table.location}
               </p>
             </div>
             <div className="col-span-2">
@@ -240,13 +234,13 @@ export function QRModal({
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-col gap-3 mt-4">
+      {/* Download & Print Actions */}
+      <div className="flex flex-col gap-3 mt-6">
         <div className="flex gap-3">
           <button
             onClick={() => onDownload('png')}
             disabled={table.status === 'inactive' || isDownloading}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-accent-500 hover:bg-accent-600 text-white transition-all disabled:bg-secondary disabled:cursor-not-allowed disabled:hover:bg-secondary"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-accent-500 hover:bg-accent-600 text-white transition-all disabled:bg-secondary disabled:cursor-not-allowed cursor-pointer disabled:hover:bg-secondary"
             style={{ fontSize: '15px', fontWeight: 600, borderRadius: '4px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
           >
             <Download className="w-5 h-5" />
@@ -255,7 +249,7 @@ export function QRModal({
           <button
             onClick={() => onDownload('pdf')}
             disabled={table.status === 'inactive' || isDownloading}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white transition-all disabled:bg-secondary disabled:cursor-not-allowed disabled:hover:bg-secondary"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white transition-all disabled:bg-secondary disabled:cursor-not-allowed cursor-pointer disabled:hover:bg-secondary"
             style={{ fontSize: '15px', fontWeight: 600, borderRadius: '4px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
           >
             <Download className="w-5 h-5" />
@@ -265,7 +259,7 @@ export function QRModal({
         <button
           onClick={onPrint}
           disabled={table.status === 'inactive' || isPrinting}
-          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-text-primary hover:bg-text-primary/90 text-white transition-all disabled:bg-secondary disabled:cursor-not-allowed disabled:hover:bg-secondary"
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-text-primary hover:bg-text-primary/90 text-white transition-all disabled:bg-secondary disabled:cursor-not-allowed cursor-pointer disabled:hover:bg-secondary"
           style={{ fontSize: '15px', fontWeight: 600, borderRadius: '4px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}
         >
           <Printer className="w-5 h-5" />

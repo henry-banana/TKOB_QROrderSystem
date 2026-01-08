@@ -30,11 +30,12 @@ export function BulkRegenerateModal({
       title="Regenerate all QR codes?"
       onClose={onClose}
       size="md"
+      disableBackdropClose={true}
       footer={
         <>
           <button
             onClick={onClose}
-            className="flex-1 px-4 text-text-secondary transition-colors border border-default hover:bg-elevated"
+            className="flex-1 px-4 text-text-secondary transition-colors border border-default hover:bg-elevated cursor-pointer"
             style={{ fontSize: '15px', fontWeight: 600, borderRadius: '4px', height: '48px' }}
           >
             Cancel
@@ -42,7 +43,7 @@ export function BulkRegenerateModal({
           <button
             onClick={onConfirm}
             disabled={isLoading}
-            className={`flex-1 px-4 text-white transition-colors flex items-center justify-center gap-2 ${
+            className={`flex-1 px-4 text-white transition-colors flex items-center justify-center gap-2 cursor-pointer ${
               isLoading ? 'bg-red-400 cursor-not-allowed' : 'bg-red-500 hover:bg-red-600'
             }`}
             style={{ fontSize: '15px', fontWeight: 600, borderRadius: '4px', height: '48px' }}

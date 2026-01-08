@@ -30,26 +30,53 @@ export function useTablesViewModel(
   error: any
 ) {
   // ============================================================================
+  // LOCATION NORMALIZATION
+  // ============================================================================
+
+  // Normalize location strings to display format
+  const normalizeLocation = (location: string): string => {
+    if (!location) return '';
+    
+    const locationMap: Record<string, string> = {
+      'indoor': 'Indoor',
+      'Indoor': 'Indoor',
+      'outdoor': 'Outdoor',
+      'Outdoor': 'Outdoor',
+      'patio': 'Patio',
+      'Patio': 'Patio',
+      'vip': 'VIP Room',
+      'vip room': 'VIP Room',
+      'VIP Room': 'VIP Room',
+    };
+    
+    return locationMap[location] || location;
+  };
+
+  // ============================================================================
   // DATA MAPPING
   // ============================================================================
 
   // Map API response to Table interface
   const tables = useMemo(() => {
     if (!apiResponse) return [];
-    return apiResponse.map((t) => ({
-      id: t.id,
-      name: t.tableNumber || `Table ${t.displayOrder}`,
-      capacity: t.capacity,
-      status: (t.status?.toLowerCase() ||
-        'available') as 'available' | 'occupied' | 'reserved' | 'inactive',
-      zone: (t.location?.toLowerCase() ||
-        'indoor') as 'indoor' | 'outdoor' | 'patio' | 'vip',
-      tableNumber: t.displayOrder || 0,
-      createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
-      description: t.description,
-      qrToken: t.qrToken,
-      qrCodeUrl: t.qrCodeUrl,
-    }));
+    return apiResponse.map((t) => {
+      // Extract numeric part and generate table name like "Table 1", "Table 2", etc.
+      const tableNum = t.tableNumber?.replace(/[^0-9]/g, '') || t.displayOrder || '';
+      const generatedName = tableNum ? `Table ${tableNum}` : `Table ${t.displayOrder}`;
+      
+      return {
+        id: t.id,
+        name: generatedName,
+        capacity: t.capacity,
+        status: (t.status?.toLowerCase() || 'available') as 'available' | 'occupied' | 'reserved' | 'inactive',
+        location: normalizeLocation(t.location || ''),
+        tableNumber: t.tableNumber || '',
+        createdAt: t.createdAt ? new Date(t.createdAt) : new Date(),
+        description: t.description,
+        qrToken: t.qrToken,
+        qrCodeUrl: t.qrCodeUrl,
+      };
+    });
   }, [apiResponse]);
 
   // Calculate summary stats

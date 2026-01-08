@@ -13,6 +13,7 @@ import {
   useCreateTable,
   useUpdateTable,
   useUpdateTableStatus,
+  useLocations,
 } from './queries/useTables';
 import { useTablesQRActions } from './useTablesQRActions';
 import { useTablesViewModel } from './useTablesViewModel';
@@ -40,6 +41,7 @@ export function useTablesPageController() {
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [selectedZone, setSelectedZone] = useState('All Locations');
   const [sortOption, setSortOption] = useState<SortOption>('Sort by: Table Number (Ascending)');
+  const [activeOnly, setActiveOnly] = useState<boolean>(false);
   
   // Toast state
   const [showSuccessToast, setShowSuccessToast] = useState(false);
@@ -77,7 +79,34 @@ export function useTablesPageController() {
     location: locationFilter,
     sortBy: sortParams.sortBy,
     sortOrder: sortParams.sortOrder,
+    activeOnly,
   });
+
+  const { data: locationsData } = useLocations();
+  const locationOptions = useMemo(() => {
+    // Normalize location strings to display format
+    const normalizeLocation = (location: string): string => {
+      if (!location) return '';
+      
+      const locationMap: Record<string, string> = {
+        'indoor': 'Indoor',
+        'Indoor': 'Indoor',
+        'outdoor': 'Outdoor',
+        'Outdoor': 'Outdoor',
+        'patio': 'Patio',
+        'Patio': 'Patio',
+        'vip': 'VIP Room',
+        'vip room': 'VIP Room',
+        'VIP Room': 'VIP Room',
+      };
+      
+      return locationMap[location] || location;
+    };
+    
+    const normalized = (locationsData || []).map(normalizeLocation);
+    const unique = Array.from(new Set(normalized));
+    return unique.sort((a, b) => a.localeCompare(b));
+  }, [locationsData]);
   
   const createTableMutation = useCreateTable();
   const updateTableMutation = useUpdateTable();
@@ -105,16 +134,55 @@ export function useTablesPageController() {
   
   const handleOpenEditModal = () => {
     if (!selectedTable) return;
+    // Map location string back to zone enum; default to 'indoor' if not recognized
+    const locationToZone: Record<string, 'indoor' | 'outdoor' | 'patio' | 'vip'> = {
+      'indoor': 'indoor',
+      'Indoor': 'indoor',
+      'outdoor': 'outdoor',
+      'Outdoor': 'outdoor',
+      'patio': 'patio',
+      'Patio': 'patio',
+      'vip': 'vip',
+      'VIP Room': 'vip',
+    };
+    const zone = locationToZone[selectedTable.location] || 'indoor';
+    // Extract number from tableNumber string (e.g., "Table 1" -> "1")
+    const tableNum = selectedTable.tableNumber.replace(/[^0-9]/g, '') || '';
     setFormData({
       name: selectedTable.name,
       capacity: selectedTable.capacity.toString(),
-      zone: selectedTable.zone,
-      tableNumber: selectedTable.tableNumber.toString(),
+      zone,
+      tableNumber: tableNum,
       status: selectedTable.status,
       description: selectedTable.description || '',
     });
     setShowEditModal(true);
     setShowQRModal(false);
+  };
+
+  // Helper to populate form data from a table (used by editTable handler)
+  const populateFormDataFromTable = (table: Table) => {
+    const locationToZone: Record<string, 'indoor' | 'outdoor' | 'patio' | 'vip'> = {
+      'indoor': 'indoor',
+      'Indoor': 'indoor',
+      'outdoor': 'outdoor',
+      'Outdoor': 'outdoor',
+      'patio': 'patio',
+      'Patio': 'patio',
+      'vip': 'vip',
+      'VIP Room': 'vip',
+    };
+    const zone = locationToZone[table.location] || 'indoor';
+    const tableNum = table.tableNumber.replace(/[^0-9]/g, '') || '';
+    return {
+      name: table.name,
+      capacity: table.capacity.toString(),
+      zone,
+      tableNumber: tableNum,
+      status: table.status,
+      description: table.description || '',
+      originalTableNumber: table.tableNumber, // Store original format (e.g., "Bar 1", "Table 1", "VIP 2")
+    };
   };
   
   const handleCloseEditModal = () => {
@@ -153,18 +221,19 @@ export function useTablesPageController() {
     }
     
     try {
-      const apiStatus = formData.status === 'available' ? 'AVAILABLE'
-        : formData.status === 'occupied' ? 'OCCUPIED'
-        : formData.status === 'reserved' ? 'RESERVED'
-        : 'INACTIVE';
+      const zoneToLocation: Record<'indoor' | 'outdoor' | 'patio' | 'vip', string> = {
+        'indoor': 'Indoor',
+        'outdoor': 'Outdoor',
+        'patio': 'Patio',
+        'vip': 'VIP Room',
+      };
       
       const payload = {
         tableNumber: `Table ${formData.tableNumber}`,
         capacity: parseInt(formData.capacity),
-        location: formData.zone.toLowerCase(),
+        location: zoneToLocation[formData.zone],
         description: formData.description.trim() || undefined,
         displayOrder: parseInt(formData.tableNumber),
-        status: apiStatus,
       };
       
       console.log('📝 [POST /tables] Request:', payload);
@@ -184,20 +253,35 @@ export function useTablesPageController() {
     if (!selectedTable) return;
     
     try {
-      const apiStatus = formData.status === 'available' ? 'AVAILABLE'
-        : formData.status === 'occupied' ? 'OCCUPIED'
-        : formData.status === 'reserved' ? 'RESERVED'
-        : 'INACTIVE';
+      const zoneToLocation: Record<'indoor' | 'outdoor' | 'patio' | 'vip', string> = {
+        'indoor': 'Indoor',
+        'outdoor': 'Outdoor',
+        'patio': 'Patio',
+        'vip': 'VIP Room',
+      };
+      
+      const statusMap = {
+        'available': 'AVAILABLE',
+        'occupied': 'OCCUPIED',
+        'reserved': 'RESERVED',
+        'inactive': 'INACTIVE',
+      } as const;
+      
+      // If table number hasn't changed, use the original format; otherwise use "Table X" format
+      const tableNumberValue = formData.originalTableNumber && 
+        formData.originalTableNumber.replace(/[^0-9]/g, '') === formData.tableNumber
+        ? formData.originalTableNumber  // Keep original format (e.g., "Bar 1", "VIP 2")
+        : `Table ${formData.tableNumber}`; // New format for changed table numbers
       
       const payload = {
         id: selectedTable.id,
         data: {
-          tableNumber: `Table ${formData.tableNumber}`,
+          tableNumber: tableNumberValue,
           capacity: parseInt(formData.capacity),
-          location: formData.zone.toLowerCase(),
+          location: zoneToLocation[formData.zone],
           description: formData.description.trim() || undefined,
           displayOrder: parseInt(formData.tableNumber),
-          status: apiStatus as 'AVAILABLE' | 'OCCUPIED' | 'RESERVED' | 'INACTIVE',
+          status: statusMap[formData.status as keyof typeof statusMap],
         },
       };
       
@@ -300,6 +384,9 @@ export function useTablesPageController() {
       setSelectedZone,
       sortOption,
       setSortOption,
+      activeOnly,
+      setActiveOnly,
+      locations: locationOptions,
     },
     
     // Modal state
@@ -371,7 +458,11 @@ export function useTablesPageController() {
       // Edit handlers
       editTable: (table: Table) => {
         setSelectedTable(table);
-        handleOpenEditModal();
+        // Populate form data synchronously, not relying on selectedTable state update
+        const newFormData = populateFormDataFromTable(table);
+        setFormData(newFormData);
+        setShowEditModal(true);
+        setShowQRModal(false);
       },
     },
   };

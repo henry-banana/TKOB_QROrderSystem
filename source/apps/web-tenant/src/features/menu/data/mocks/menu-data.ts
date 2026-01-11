@@ -1,6 +1,9 @@
 /**
  * Mock Menu Data
  * Provides fake menu items, categories, and modifier groups for development
+ * 
+ * Migrated from src/services/mocks/menu-data.ts (January 10, 2026)
+ * This is the feature-local seed data for the Menu feature.
  */
 
 export const mockCategories = [

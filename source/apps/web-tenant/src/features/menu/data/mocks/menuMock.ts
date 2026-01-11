@@ -3,7 +3,7 @@
  * Mock data for development/testing
  */
 
-import { mockCategories, mockMenuItems, mockModifierGroups } from '@/services/mocks/menu-data';
+import { mockCategories, mockMenuItems, mockModifierGroups } from './menu-data';
 
 /**
  * Menu Categories Mock

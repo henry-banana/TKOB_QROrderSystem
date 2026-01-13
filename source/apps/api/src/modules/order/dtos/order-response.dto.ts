@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { CartModifierDto } from './cart.dto';
 
 export class OrderItemResponseDto {
@@ -14,7 +14,7 @@ export class OrderItemResponseDto {
   @ApiProperty()
   quantity: number;
 
-  @ApiProperty()
+  @ApiProperty({ type: [CartModifierDto] })
   modifiers: CartModifierDto[];
 
   @ApiProperty()
@@ -25,6 +25,9 @@ export class OrderItemResponseDto {
 
   @ApiProperty()
   prepared: boolean;
+
+  @ApiPropertyOptional()
+  preparedAt: Date;
 }
 
 export class OrderResponseDto {
@@ -49,6 +52,12 @@ export class OrderResponseDto {
   @ApiProperty()
   status: string;
 
+  @ApiProperty({
+    enum: ['NORMAL', 'HIGH', 'URGENT'],
+    default: 'NORMAL',
+  })
+  priority: string;
+
   @ApiProperty()
   paymentMethod: string;
 
@@ -67,8 +76,20 @@ export class OrderResponseDto {
   @ApiProperty({ type: [OrderItemResponseDto] })
   items: OrderItemResponseDto[];
 
+  @ApiPropertyOptional({ description: 'Estimated preparation time in minutes' })
+  estimatedPrepTime?: number;
+
+  @ApiPropertyOptional({ description: 'Actual preparation time in minutes' })
+  actualPrepTime?: number;
+
+  @ApiPropertyOptional({ description: 'Time elapsed since order started preparing (minutes)' })
+  elapsedPrepTime?: number;
+
   @ApiProperty()
   createdAt: Date;
+
+  @ApiPropertyOptional()
+  receivedAt?: Date;
 
   @ApiProperty({ required: false })
   preparingAt?: Date;
@@ -81,6 +102,7 @@ export class OrderResponseDto {
 
   @ApiProperty({ required: false })
   completedAt?: Date;
+
   // stripePaymentIntentId?: string;
 
   // @ApiProperty()

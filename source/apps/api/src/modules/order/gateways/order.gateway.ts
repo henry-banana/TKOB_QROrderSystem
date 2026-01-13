@@ -1,89 +1,190 @@
 import { Logger } from '@nestjs/common';
 import {
+  ConnectedSocket,
+  MessageBody,
   OnGatewayConnection,
   OnGatewayDisconnect,
-  OnGatewayInit,
+  SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Server, Socket } from 'socket.io';
+import { Socket, Server } from 'socket.io';
 import { OrderResponseDto } from '../dtos/order-response.dto';
 import { OrderEvents } from '../constants/events.constant';
 
 /**
- * WebSocket Gateway for real-time order updates
+ * Order WebSocket Gateway
  *
- * Room Strategy:
- * - `tenant:{tenantId}` - Staff/Kitchen join to receive all orders for their tenant
- * - `table:{tableId}` - Customer join to track their specific table's orders
+ * Provides real-time updates for:
+ * - New orders (notify staff/kitchen)
+ * - Order status changes (notify customers & staff)
+ * - Order preparation timer updates
  *
- * Events emitted:
- * - `order.new` - New order created (for KDS)
- * - `order.status_changed` - Order status updated (for customer tracking & KDS)
+ * Rooms:
+ * - `tenant:{tenantId}:staff` - Staff/Kitchen dashboard
+ * - `tenant:{tenantId}:customer:{tableId}` - Customer order tracking
  */
 @WebSocketGateway({
   namespace: '/orders',
   cors: {
-    origin: '*', // Configure appropriately for production
+    origin: process.env.CUSTOMER_APP_URL || 'http://localhost:3001',
     credentials: true,
   },
 })
-export class OrderGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
-  private readonly logger = new Logger(OrderGateway.name);
-
+export class OrderGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
-  afterInit() {
-    this.logger.log('OrderGateway initialized');
-  }
+  private readonly logger = new Logger(OrderGateway.name);
+
+  // Track Connection clients
+  private clients = new Map<
+    string,
+    { tenantId: string; role: 'staff' | 'customer'; tableId?: string }
+  >();
 
   handleConnection(client: Socket) {
+    this.logger.log(`Client connected: ${client.id}`);
+
+    // const { tenantId, role, tableId } = client.handshake.query;
     const tenantId = client.handshake.query.tenantId as string;
+    const role = client.handshake.query.role as 'staff' | 'customer';
     const tableId = client.handshake.query.tableId as string;
 
-    if (tenantId) {
-      void client.join(`tenant:${tenantId}`);
-      this.logger.log(`Client ${client.id} joined tenant room: ${tenantId}`);
+    if (!tenantId || !role) {
+      this.logger.warn(`Client ${client.id} missing auth info, disconnecting`);
+      client.disconnect();
+      return;
     }
 
-    if (tableId) {
-      void client.join(`table:${tableId}`);
-      this.logger.log(`Client ${client.id} joined table room: ${tableId}`);
-    }
+    // Store client info
+    this.clients.set(client.id, {
+      tenantId: tenantId,
+      role: role,
+      tableId: tableId as string | undefined,
+    });
 
-    if (!tenantId && !tableId) {
-      this.logger.warn(`Client ${client.id} connected without tenantId or tableId`);
+    // Join appropriate room
+    if (role === 'staff') {
+      const staffRoom = `tenant:${tenantId}:staff`;
+      void client.join(staffRoom);
+      this.logger.log(`Staff client ${client.id} joined room: ${staffRoom}`);
+    } else if (role === 'customer' && tableId) {
+      const customerRoom = `tenant:${tenantId}:customer:${tableId}`;
+      void client.join(customerRoom);
+      this.logger.log(`Customer client ${client.id} joined room: ${customerRoom}`);
     }
   }
 
+  /**
+   * Handle client disconnection
+   */
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
+    this.clients.delete(client.id);
+  }
+
+  @SubscribeMessage('subscribe:staff')
+  handleStaffSubcribe(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { tenantId: string },
+  ) {
+    const room = `tenant:${data.tenantId}:staff`;
+    void client.join(room);
+    this.logger.log(`Client ${client.id} subscribed to staff room: ${room}`);
+    return { success: true, room };
+  }
+
+  @SubscribeMessage('subscribe:customer')
+  handleCustomerSubscribe(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { tenantId: string; tableId: string },
+  ) {
+    const room = `tenant:${data.tenantId}:customer:${data.tableId}`;
+    void client.join(room);
+    this.logger.log(`Client ${client.id} subscribed to customer room: ${room}`);
+    return { success: true, room };
+  }
+
+  // ==================== SERVER-SIDE EMITTERS ====================
+
+  /**
+   * Emit new order notification to staff/kitchen
+   * Triggered when customer checks out
+   */
+  emitNewOrder(tenantId: string, order: OrderResponseDto) {
+    const room = `tenant:${tenantId}:staff`;
+    this.server.to(room).emit(OrderEvents.NEW_ORDER, {
+      order,
+      timestamp: new Date(),
+    });
+    this.logger.log(`New order notification sent to room: ${room} - Order #${order.orderNumber}`);
   }
 
   /**
-   * Emit when a new order is created
-   * Sent to tenant room (for Staff/Kitchen KDS)
+   * Emit order status change to staff & customers
+   * Triggered when staff updates order status
    */
-  emitNewOrder(tenantId: string, order: OrderResponseDto): void {
-    this.server.to(`tenant:${tenantId}`).emit(OrderEvents.NEW_ORDER, order);
-    this.logger.log(`Emitted order.new for order ${order.orderNumber} to tenant:${tenantId}`);
+  emitOrderStatusChanged(tenantId: string, order: OrderResponseDto) {
+    // Notify staff
+    const staffRoom = `tenant:${tenantId}:staff`;
+    this.server.to(staffRoom).emit(OrderEvents.STATUS_CHANGED, {
+      order,
+      timestamp: new Date(),
+    });
+
+    // Notify customer at table
+    const customerRoom = `tenant:${tenantId}:customer:${order.tableId}`;
+    this.server.to(customerRoom).emit(OrderEvents.STATUS_CHANGED, {
+      order,
+      timestamp: new Date(),
+    });
+
+    this.logger.log(`Order status change emitted - Order #${order.orderNumber} → ${order.status}`);
   }
 
   /**
-   * Emit when order status changes
-   * Sent to both tenant room (KDS) and table room (customer tracking)
+   * Emit order timer update (for KDS)
+   * Called periodically for orders in PREPARING status
    */
-  emitOrderStatusChanged(tenantId: string, order: OrderResponseDto): void {
-    // Notify kitchen/staff dashboard
-    this.server.to(`tenant:${tenantId}`).emit(OrderEvents.STATUS_CHANGED, order);
+  emitOrderTimerUpdate(
+    tenantId: string,
+    orderId: string,
+    elapsedMinutes: number,
+    priority: 'NORMAL' | 'HIGH' | 'URGENT',
+  ) {
+    const staffRoom = `tenant:${tenantId}:staff`;
+    this.server.to(staffRoom).emit('order:timer_update', {
+      orderId,
+      elapsedMinutes,
+      priority,
+      timestamp: new Date(),
+    });
+  }
 
-    // Notify customer on that table
-    this.server.to(`table:${order.tableId}`).emit(OrderEvents.STATUS_CHANGED, order);
+  /**
+   * Broadcast order list update to staff (for dashboard refresh)
+   */
+  emitOrderListUpdate(tenantId: string, orders: OrderResponseDto[]) {
+    const staffRoom = `tenant:${tenantId}:staff`;
+    this.server.to(staffRoom).emit('order:list_update', {
+      orders,
+      timestamp: new Date(),
+    });
+  }
 
-    this.logger.log(
-      `Emitted order.status_changed for order ${order.orderNumber} ` +
-        `(status: ${order.status}) to tenant:${tenantId} and table:${order.tableId}`,
-    );
+  /**
+   * Get connected clients count for monitoring
+   */
+  getConnectedClientsCount(): number {
+    return this.clients.size;
+  }
+
+  /**
+   * Get clients in a specific room
+   */
+  async getClientsInRoom(room: string): Promise<string[]> {
+    const sockets = await this.server.in(room).fetchSockets();
+    return sockets.map((s) => s.id);
   }
 }

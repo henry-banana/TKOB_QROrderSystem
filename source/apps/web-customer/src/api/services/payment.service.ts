@@ -1,30 +1,52 @@
 // Payment service - handles payment processing
+// Uses Strategy Pattern for mock/real API switching
 
-import apiClient from '@/api/client';
+import { StrategyFactory } from '@/api/strategies';
 import { ApiResponse } from '@/types';
+
+// DTO Types matching backend
+export interface PaymentIntentDto {
+  orderId: string;
+  amount: number;
+  paymentMethod?: 'SEPAY' | 'STRIPE';
+}
+
+export interface PaymentIntentResponse {
+  id: string;
+  qrCode?: string; // Base64 QR code image for SePay
+  bankAccount?: {
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+  };
+  transferContent?: string; // Transfer message for manual payment
+  amount: number;
+  status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+  expiresAt?: string;
+}
+
+export interface PaymentStatusResponse {
+  id: string;
+  status: 'PENDING' | 'COMPLETED' | 'FAILED' | 'REFUNDED';
+  amount: number;
+  paidAt?: string;
+}
+
+// Create strategy instance
+const paymentStrategy = StrategyFactory.createPaymentStrategy();
 
 export const PaymentService = {
   /**
-   * Process card payment
+   * Create payment intent for an order
    */
-  async processCardPayment(data: {
-    orderId: string;
-    amount: number;
-  }): Promise<ApiResponse<{
-    transactionId: string;
-    status: 'completed' | 'failed';
-  }>> {
-    const response = await apiClient.post('/api/payment/process', data);
-    return response.data;
+  async createPaymentIntent(dto: PaymentIntentDto): Promise<ApiResponse<PaymentIntentResponse>> {
+    return paymentStrategy.createPaymentIntent(dto);
   },
-  
+
   /**
-   * Verify payment status
+   * Get payment status (with polling support)
    */
-  async verifyPayment(transactionId: string): Promise<ApiResponse<{
-    status: 'completed' | 'pending' | 'failed';
-  }>> {
-    const response = await apiClient.get(`/api/payment/verify/${transactionId}`);
-    return response.data;
+  async getPaymentStatus(paymentId: string): Promise<ApiResponse<PaymentStatusResponse>> {
+    return paymentStrategy.getPaymentStatus(paymentId);
   },
 };

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { MenuService } from '@/api/services/menu.service'
 import { MenuItem, ApiResponse } from '@/types'
+import { queryKeys } from '@/lib/query-client'
 
 interface UseMenuItemReturn {
   item: MenuItem | null
@@ -13,39 +14,18 @@ interface UseMenuItemReturn {
  * Hook to fetch single menu item by ID
  */
 export function useMenuItem(itemId: string): UseMenuItemReturn {
-  const [item, setItem] = useState<MenuItem | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchItem = async () => {
-    try {
-      setIsLoading(true)
-      setError(null)
-      const response: ApiResponse<MenuItem> = await MenuService.getMenuItem(itemId)
-      
-      if (response.success && response.data) {
-        setItem(response.data)
-      } else {
-        setError(response.message || 'Failed to fetch item')
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (itemId) {
-      fetchItem()
-    }
-  }, [itemId])
+  const { data, isLoading, error, refetch } = useQuery<ApiResponse<MenuItem>, Error>({
+    queryKey: queryKeys.menuItem(itemId),
+    queryFn: () => MenuService.getMenuItem(itemId),
+    enabled: !!itemId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
 
   return {
-    item,
+    item: data?.data ?? null,
     isLoading,
-    error,
-    refetch: fetchItem,
+    error: error?.message ?? null,
+    refetch,
   }
 }
 
@@ -63,40 +43,39 @@ interface UseMenuReturn {
  * No token needed - uses HttpOnly cookie automatically
  */
 export function useMenu(tenantId?: string): UseMenuReturn {
-  const [items, setItems] = useState<MenuItem[]>([])
-  const [categories, setCategories] = useState<string[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchMenu = async () => {
-    try {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: queryKeys.menu(tenantId),
+    queryFn: async () => {
       if (!tenantId) {
-        // Wait until tenant context is available (session load)
-        setIsLoading(false)
-        return
+        throw new Error('Tenant ID is required')
       }
+      
       if (process.env.NODE_ENV === 'development') {
-        console.log('[useMenu] fetching menu')
+        console.log('[useMenu] fetching menu for tenant:', tenantId)
       }
-      setIsLoading(true)
-      setError(null)
+      
       const response = await MenuService.getPublicMenu(tenantId)
       
-      if (response.success && response.data) {
-        setItems(response.data.items)
-        setCategories(response.data.categories)
-      } else {
-        setError(response.message || 'Failed to fetch menu')
+      if (!response.success || !response.data) {
+        throw new Error(response.message || 'Failed to fetch menu')
       }
-    } catch (err) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('[useMenu] fetchMenu error', err)
-      }
-      setError(err instanceof Error ? err.message : 'An error occurred')
-    } finally {
-      setIsLoading(false)
-    }
+      
+      return response.data
+    },
+    enabled: !!tenantId,
+    staleTime: 2 * 60 * 1000, // 2 minutes - menu doesn't change often
+    refetchOnWindowFocus: false,
+  })
+
+  return {
+    data: data?.items ?? null,
+    items: data?.items ?? [],
+    categories: data?.categories ?? [],
+    isLoading,
+    error: error?.message ?? null,
+    refetch,
   }
+}
 
   useEffect(() => {
     fetchMenu()

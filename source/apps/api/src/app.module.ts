@@ -14,6 +14,8 @@ import { TenantContextMiddleware } from './common/middleware/tenant-context.midd
 import { MenuModule } from './modules/menu/menu.module';
 import { TableModule } from './modules/table/table.module';
 import { OrderModule } from './modules/order/order.module';
+import { PaymentModule } from './modules/payment/payment.module';
+import { WebsocketModule } from './modules/websocket/websocket.module';
 
 @Module({
   imports: [
@@ -58,6 +60,8 @@ import { OrderModule } from './modules/order/order.module';
     MenuModule,
     TableModule,
     OrderModule,
+    PaymentModule,
+    WebsocketModule,
   ],
   controllers: [AppController],
   providers: [

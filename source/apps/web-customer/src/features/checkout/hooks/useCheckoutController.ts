@@ -1,24 +1,21 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useCart } from '@/hooks/useCart'
-import { mockTable } from '@/lib/mockData'
+import { useCheckout } from '@/hooks/useCheckout'
+import { useSession } from '@/hooks/useSession'
 import { SERVICE_CHARGE_RATE, type CheckoutFormData, type CheckoutState } from '../model'
 
 export function useCheckoutController() {
   const router = useRouter()
-  const { items: cartItems } = useCart()
+  const { data: session } = useSession()
+  const { items: cartItems, subtotal, tax, serviceCharge, total } = useCart()
+  const checkout = useCheckout()
+  
   const [formData, setFormData] = useState<CheckoutFormData>({
     name: '',
     notes: '',
     paymentMethod: 'counter',
   })
-
-  // TODO: Replace with actual cart totals from cart context or passed props
-  // For now, calculate minimal totals
-  const subtotal = 0 // In real app, get from cart
-  const tax = subtotal * 0.1
-  const serviceCharge = subtotal * SERVICE_CHARGE_RATE
-  const total = subtotal + tax + serviceCharge
 
   const state: CheckoutState = useMemo(
     () => ({
@@ -31,12 +28,38 @@ export function useCheckoutController() {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSubmit = () => {
-    // Route based on payment method (no API call yet)
-    if (formData.paymentMethod === 'card') {
-      router.push('/payment/qr')
-    } else {
-      router.push('/payment/success')
+  const handleSubmit = async () => {
+    // Validate cart is not empty
+    if (cartItems.length === 0) {
+      alert('Your cart is empty')
+      return
+    }
+
+    try {
+      // Map paymentMethod to backend enum
+      const paymentMethod = formData.paymentMethod === 'card' ? 'SEPAY' : 'STRIPE'
+      
+      const result = await checkout.mutateAsync({
+        customerName: formData.name || undefined,
+        specialInstructions: formData.notes || undefined,
+        paymentMethod,
+      })
+
+      // Navigate based on payment method
+      if (result.success && result.data) {
+        const orderId = result.data.id
+        
+        if (formData.paymentMethod === 'card') {
+          // Redirect to payment page with orderId
+          router.push(`/payment/${orderId}`)
+        } else {
+          // Counter payment - go directly to success/order tracking
+          router.push(`/orders/${orderId}`)
+        }
+      }
+    } catch (error) {
+      console.error('Checkout error:', error)
+      alert(error instanceof Error ? error.message : 'Failed to create order. Please try again.')
     }
   }
 
@@ -51,11 +74,15 @@ export function useCheckoutController() {
 
     // Cart info
     cartItems,
-    mockTable,
+    tableNumber: session?.table.number || '?',
     subtotal,
     tax,
     serviceCharge,
     total,
+
+    // Mutation state
+    isLoading: checkout.isPending,
+    error: checkout.error,
 
     // Actions
     handleSubmit,

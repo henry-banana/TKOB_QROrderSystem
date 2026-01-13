@@ -2,49 +2,32 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
-import { Order, type OrdersState } from '../model'
-import { OrderService } from '@/api/services/order.service'
+import { useTableOrders } from '@/hooks/useOrders'
+import { useSession } from '@/hooks/useSession'
+import { type OrdersState } from '../model'
 
 export function useOrdersController() {
   const router = useRouter()
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
-
-  // Mock/API data (replace with real API calls)
-  const { data: currentOrder, isLoading: currentLoading } = useQuery({
-    queryKey: ['currentOrder'],
-    queryFn: async () => {
-      // TODO: Replace with real API or mock
-      return null as Order | null
-    },
-  })
-
-  const { data: orderHistory = [], isLoading: historyLoading } = useQuery({
-    queryKey: ['orderHistory'],
-    queryFn: async () => {
-      // TODO: Replace with real API or mock
-      return [] as Order[]
-    },
-  })
+  const { data: session } = useSession()
+  const tableId = session?.table?.id
+  
+  const { data: ordersResponse, isLoading } = useTableOrders(tableId ?? null)
+  const orders = ordersResponse?.data ?? []
 
   // State
   const state: OrdersState = useMemo(
     () => ({
-      currentOrder: currentOrder || null,
-      orderHistory,
-      selectedOrder,
+      currentOrder: orders.length > 0 ? orders[0] : null, // Latest order
+      orderHistory: orders.slice(1), // Rest of orders
+      selectedOrder: null,
       isLoggedIn: false, // TODO: Get from auth context
-      isLoading: currentLoading || historyLoading,
+      isLoading,
       error: null,
     }),
-    [currentOrder, orderHistory, selectedOrder, currentLoading, historyLoading]
+    [orders, isLoading]
   )
 
   // Actions
-  const selectOrder = (order: Order) => {
-    setSelectedOrder(order)
-  }
-
   const openOrderDetails = (orderId: string) => {
     router.push(`/orders/${orderId}`)
   }
@@ -57,14 +40,12 @@ export function useOrdersController() {
     router.push('/auth/login')
   }
 
-  const handlePayOrder = (order: Order) => {
-    // TODO: Navigate to payment with order context
-    router.push('/payment?orderId=' + order.id)
+  const handlePayOrder = (orderId: string) => {
+    router.push(`/payment/${orderId}`)
   }
 
   return {
     state,
-    selectOrder,
     openOrderDetails,
     openTracking,
     handleLogin,

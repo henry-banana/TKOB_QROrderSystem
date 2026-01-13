@@ -1,47 +1,59 @@
-// Order service - handles order creation and management
-// Refactored to use Strategy Pattern
+// Order service - handles order operations
 
-import { StrategyFactory } from '@/api/strategies';
-import { ApiResponse, Order, CartItem } from '@/types';
+import apiClient from '@/api/client';
+import { ApiResponse } from '@/types';
 
-// Create strategy instance (mock or real based on API_MODE)
-const orderStrategy = StrategyFactory.createOrderStrategy();
+export interface OrderItemDto {
+  id: string;
+  menuItemId: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+}
+
+export interface OrderDto {
+  id: string;
+  orderNumber: string;
+  status: 'PENDING' | 'PREPARING' | 'READY' | 'COMPLETED' | 'CANCELLED';
+  tableId: string;
+  tableName?: string;
+  customerName?: string;
+  specialInstructions?: string;
+  items: OrderItemDto[];
+  subtotal: number;
+  tax: number;
+  serviceCharge: number;
+  total: number;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export const OrderService = {
   /**
-   * Create new order
+   * Get orders for current table (session-based)
    */
-  async createOrder(data: {
-    tableId: string;
-    items: CartItem[];
-    customerName?: string;
-    notes?: string;
-    paymentMethod: 'card' | 'counter';
-  }): Promise<ApiResponse<Order>> {
-    return orderStrategy.createOrder(data);
+  async getTableOrders(tableId: string): Promise<ApiResponse<OrderDto[]>> {
+    const response = await apiClient.get<{ success: boolean; data: OrderDto[] }>(
+      `/orders/table/${tableId}`
+    );
+    return {
+      success: response.data.success,
+      data: response.data.data,
+      message: 'Orders fetched successfully',
+    };
   },
-  
+
   /**
-   * Get order by ID
+   * Get single order details
    */
-  async getOrder(id: string): Promise<ApiResponse<Order>> {
-    return orderStrategy.getOrder(id);
-  },
-  
-  /**
-   * Get order history for user
-   */
-  async getOrderHistory(userId: string): Promise<ApiResponse<Order[]>> {
-    return orderStrategy.getOrderHistory(userId);
-  },
-  
-  /**
-   * Update order status (for testing/admin)
-   */
-  async updateOrderStatus(
-    orderId: string,
-    status: Order['status']
-  ): Promise<ApiResponse<Order>> {
-    return orderStrategy.updateOrderStatus(orderId, status);
+  async getOrder(orderId: string): Promise<ApiResponse<OrderDto>> {
+    const response = await apiClient.get<{ success: boolean; data: OrderDto }>(
+      `/orders/${orderId}`
+    );
+    return {
+      success: response.data.success,
+      data: response.data.data,
+      message: 'Order fetched successfully',
+    };
   },
 };

@@ -25,29 +25,37 @@ import { SessionData } from '@/modules/table/services/table-session.service';
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
-  // Create
+  // Create / Add to cart
   @Post('items')
   @ApiCookieAuth('table_session_id')
-  @ApiOperation({ summary: 'Add item to card' })
+  @ApiOperation({ summary: 'Add item to cart' })
   @ApiResponse({ status: 201, type: CartResponseDto })
   async addToCart(
     @Session() session: SessionData,
     @Body() dto: AddToCartDto,
   ): Promise<CartResponseDto> {
-    return this.cartService.addToCard(session.sessionId, session.tenantId, dto);
+    return this.cartService.addToCard(
+      session.sessionId,
+      session.tenantId,
+      session.tableId,
+      dto,
+    );
   }
 
-  // Read
+  // Read - Get cart for current session
   @Get()
   @ApiCookieAuth('table_session_id')
   @ApiOperation({ summary: 'Get cart for current session' })
   @ApiResponse({ status: 200, type: CartResponseDto })
   async getCart(@Session() session: SessionData): Promise<CartResponseDto> {
-    const cart = await this.cartService.getCart(session.sessionId);
-    return this.cartService['toResponseDto'](cart);
+    return this.cartService.getCartByTable(
+      session.tenantId,
+      session.tableId,
+      session.sessionId,
+    );
   }
 
-  // Update
+  // Update - Update cart item quantity
   @Patch('items/:itemId')
   @ApiCookieAuth('table_session_id')
   @ApiOperation({ summary: 'Update cart item quantity' })
@@ -57,10 +65,16 @@ export class CartController {
     @Param('itemId') itemId: string,
     @Body() dto: UpdateCartItemDto,
   ): Promise<CartResponseDto> {
-    return this.cartService.updateCartItem(session.sessionId, itemId, dto);
+    // Get cart ID from session
+    const cartId = await this.cartService.getOrCreateCart(
+      session.tenantId,
+      session.tableId,
+      session.sessionId,
+    );
+    return this.cartService.updateCartItem(cartId, itemId, dto);
   }
 
-  // Delete
+  // Delete - Remove item from cart
   @Delete('items/:itemId')
   @ApiCookieAuth('table_session_id')
   @HttpCode(HttpStatus.OK)
@@ -70,15 +84,28 @@ export class CartController {
     @Session() session: SessionData,
     @Param('itemId') itemId: string,
   ): Promise<CartResponseDto> {
-    return await this.cartService.removeCartItem(session.sessionId, itemId);
+    // Get cart ID from session
+    const cartId = await this.cartService.getOrCreateCart(
+      session.tenantId,
+      session.tableId,
+      session.sessionId,
+    );
+    return this.cartService.removeCartItem(cartId, itemId);
   }
 
+  // Delete - Clear cart
   @Delete()
   @ApiCookieAuth('table_session_id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Clear cart' })
   @ApiResponse({ status: 204 })
   async clearCart(@Session() session: SessionData): Promise<void> {
-    await this.cartService.clearCart(session.sessionId);
+    // Get cart ID from session
+    const cartId = await this.cartService.getOrCreateCart(
+      session.tenantId,
+      session.tableId,
+      session.sessionId,
+    );
+    await this.cartService.clearCart(cartId);
   }
 }

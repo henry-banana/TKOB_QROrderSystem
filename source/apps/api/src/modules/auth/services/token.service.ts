@@ -43,9 +43,9 @@ export class TokenService {
 
     const expiresIn = this.config.get('JWT_ACCESS_TOKEN_EXPIRES_IN', {
       infer: true,
-    });
+    }) as string;
 
-    const token = this.jwt.sign(payload, { expiresIn });
+    const token = this.jwt.sign(payload, { expiresIn: expiresIn as any });
 
     this.logger.debug(`Access token generated for user: ${userId}`);
     return token;
@@ -63,9 +63,9 @@ export class TokenService {
 
     const expiresIn = this.config.get('JWT_REFRESH_TOKEN_EXPIRES_IN', {
       infer: true,
-    });
+    }) as string;
 
-    const token = this.jwt.sign(payload, { expiresIn });
+    const token = this.jwt.sign(payload, { expiresIn: expiresIn as any });
 
     this.logger.debug(`Refresh token generated for user: ${userId}`);
     return token;

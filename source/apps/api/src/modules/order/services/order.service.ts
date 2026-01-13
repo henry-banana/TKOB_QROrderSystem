@@ -11,6 +11,7 @@ import { CartService } from './cart.service';
 import { MenuItemsService } from '@/modules/menu/services/menu-item.service';
 import { OrderResponseDto } from '../dtos/order-response.dto';
 import { OrderStatus, PaymentMethod } from '@prisma/client';
+import { OrderGateway } from '@/modules/websocket/gateways/order.gateway';
 
 // Import PaymentStatus type and enum directly from Prisma client
 import type { PaymentStatus, Prisma } from '@prisma/client';
@@ -31,6 +32,7 @@ export class OrderService {
     private readonly prisma: PrismaService,
     private readonly cartService: CartService,
     private readonly menuItemsService: MenuItemsService,
+    private readonly orderGateway: OrderGateway,
   ) {}
 
   async checkout(
@@ -39,8 +41,8 @@ export class OrderService {
     tableId: string,
     dto: CheckoutDto,
   ): Promise<OrderResponseDto> {
-    // 1. Get cart
-    const cart = await this.cartService.getCart(sessionId);
+    // 1. Get cart by table
+    const cart = await this.cartService.getCartByTable(tenantId, tableId, sessionId);
 
     if (cart.items.length === 0) {
       throw new BadRequestException('Cart is empty');
@@ -106,21 +108,19 @@ export class OrderService {
       return newOrder;
     });
 
-    // 5. Clear cart
-    await this.cartService.clearCart(sessionId);
-
-    // 6. If online payment, create Stripe PaymentIntent
-    // let stripeClientSecret: string | undefined;
-    // if (dto.paymentMethod === 'CARD_ONLINE') {
-    //   // TODO: Implement Stripe integration (Epic 5)
-    //   // stripeClientSecret = await this.stripeService.createPaymentIntent(order);
-    //   throw new BadRequestException('Online payment not yet implemented');
-    // }
+    // 5. Clear cart - get cartId first
+    const cartId = await this.cartService.getOrCreateCart(tenantId, tableId, sessionId);
+    await this.cartService.clearCart(cartId);
 
     this.logger.log(`Order created: ${orderNumber} for table ${tableId}`);
 
+    // 6. Emit WebSocket event for real-time updates
+    const orderDetails = await this.getOrderById(order.id);
+    this.orderGateway.emitOrderCreated(tenantId, orderDetails);
+    this.logger.debug(`Emitted order:created event for order ${order.id}`);
+
     // 7. Return order details
-    return this.getOrderById(order.id);
+    return orderDetails;
   }
 
   /**
@@ -253,7 +253,17 @@ export class OrderService {
 
     this.logger.log(`Order ${order.orderNumber} status updated to ${dto.status} by ${staffId}`);
 
-    return this.getOrderById(orderId);
+    // Emit WebSocket event for status change
+    const updatedOrder = await this.getOrderById(orderId);
+    this.orderGateway.emitOrderStatusChanged(
+      order.tenantId,
+      orderId,
+      dto.status,
+      updatedOrder,
+    );
+    this.logger.debug(`Emitted order:status_changed event for order ${orderId}`);
+
+    return updatedOrder;
   }
 
   /**

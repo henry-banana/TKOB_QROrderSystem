@@ -1,46 +1,31 @@
 // Hook to get current table session information
+// Refactored to use React Query for better state management
 
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { TableService, SessionInfo } from '@/api/services/table.service';
+import { queryKeys } from '@/lib/query-client';
 
 export function useSession() {
-  const [session, setSession] = useState<SessionInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function fetchSession() {
+  const { data: session, isLoading: loading, error } = useQuery<SessionInfo, Error>({
+    queryKey: queryKeys.session,
+    queryFn: async () => {
       try {
-        setLoading(true);
         const sessionData = await TableService.getCurrentSession();
-        
         console.log('[useSession] Session data received:', sessionData);
-        
-        if (mounted) {
-          setSession(sessionData);
-          setError(null);
-        }
+        return sessionData;
       } catch (err) {
-        if (mounted) {
-          console.error('[useSession] Failed to get session:', err);
-          setSession(null);
-          setError(err instanceof Error ? err : new Error('Failed to get session'));
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
+        console.error('[useSession] Failed to get session:', err);
+        throw err;
       }
-    }
+    },
+    retry: 1,
+    staleTime: 5 * 60 * 1000, // 5 minutes - session is stable
+    refetchOnWindowFocus: false,
+  });
 
-    fetchSession();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  return { session, loading, error };
+  return { 
+    session: session ?? null, 
+    loading, 
+    error: error ?? null 
+  };
 }

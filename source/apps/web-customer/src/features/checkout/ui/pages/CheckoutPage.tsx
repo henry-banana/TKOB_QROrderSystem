@@ -1,11 +1,19 @@
 'use client'
 
-import { ArrowLeft, QrCode, Wallet } from 'lucide-react'
+import { ArrowLeft, QrCode, Wallet, Loader2 } from 'lucide-react'
 import { useCheckoutController } from '../../hooks'
 
 export function CheckoutPage() {
-  const { state, updateField, cartItems, mockTable, total, handleSubmit, handleBack } =
-    useCheckoutController()
+  const { 
+    state, 
+    updateField, 
+    cartItems, 
+    tableNumber, 
+    total, 
+    isLoading, 
+    handleSubmit, 
+    handleBack 
+  } = useCheckoutController()
 
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--gray-50)' }}>
@@ -28,7 +36,7 @@ export function CheckoutPage() {
         <div className="bg-white border-b p-4" style={{ borderColor: 'var(--gray-200)' }}>
           <div className="flex items-center justify-between" style={{ fontSize: '14px' }}>
             <span style={{ color: 'var(--gray-600)' }}>
-              Table {mockTable.number} · {cartItems.length} items
+              Table {tableNumber} · {cartItems.length} items
             </span>
             <span style={{ color: 'var(--gray-900)' }}>
               ${total.toFixed(2)}
@@ -146,14 +154,22 @@ export function CheckoutPage() {
         <div className="max-w-[480px] mx-auto">
           <button
             onClick={handleSubmit}
-            className="w-full py-3 px-6 rounded-full transition-all hover:shadow-md active:scale-95"
+            disabled={isLoading || cartItems.length === 0}
+            className="w-full py-3 px-6 rounded-full transition-all hover:shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             style={{
               backgroundColor: 'var(--orange-500)',
               color: 'white',
               minHeight: '48px',
             }}
           >
-            {state.paymentMethod === 'card' ? 'Continue to payment' : 'Place order'}
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Processing...</span>
+              </>
+            ) : (
+              <span>{state.paymentMethod === 'card' ? 'Continue to payment' : 'Place order'}</span>
+            )}
           </button>
         </div>
       </div>

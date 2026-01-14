@@ -1,7 +1,6 @@
-import { Minus, Plus, Trash2, Loader2 } from 'lucide-react';
+import { Minus, Plus, Trash2 } from 'lucide-react';
 import { CartItem } from '@/types';
 import { OptimizedImage } from '@packages/ui';
-import { useState } from 'react';
 
 interface CartItemCardProps {
   cartItem: CartItem;
@@ -11,18 +10,6 @@ interface CartItemCardProps {
 }
 
 export function CartItemCard({ cartItem, onUpdateQuantity, onRemove, onEdit }: CartItemCardProps) {
-  const [isUpdating, setIsUpdating] = useState(false);
-
-  const handleQuantityChange = async (newQuantity: number) => {
-    setIsUpdating(true);
-    try {
-      await onUpdateQuantity(cartItem.id, newQuantity);
-    } finally {
-      // Small delay to show loading state
-      setTimeout(() => setIsUpdating(false), 300);
-    }
-  };
-
   const getItemTotal = () => {
     let total = cartItem.menuItem.basePrice;
 
@@ -103,29 +90,20 @@ export function CartItemCard({ cartItem, onUpdateQuantity, onRemove, onEdit }: C
           <div className="flex items-center justify-between mt-2">
             <div className="flex items-center gap-2 border rounded-full px-1 py-0.5" style={{ borderColor: 'var(--gray-300)' }}>
               <button
-                onClick={() => handleQuantityChange(Math.max(1, cartItem.quantity - 1))}
-                className="w-6 h-6 rounded-full flex items-center justify-center transition-colors hover:bg-[var(--gray-100)] disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={cartItem.quantity <= 1 || isUpdating}
+                onClick={() => onUpdateQuantity(cartItem.id, Math.max(1, cartItem.quantity - 1))}
+                className="w-6 h-6 rounded-full flex items-center justify-center transition-colors hover:bg-[var(--gray-100)]"
+                disabled={cartItem.quantity <= 1}
               >
-                {isUpdating ? (
-                  <Loader2 className="w-3 h-3 animate-spin" style={{ color: 'var(--gray-700)' }} />
-                ) : (
-                  <Minus className="w-3 h-3" style={{ color: 'var(--gray-700)' }} />
-                )}
+                <Minus className="w-3 h-3" style={{ color: 'var(--gray-700)' }} />
               </button>
               <span className="min-w-[20px] text-center" style={{ color: 'var(--gray-900)', fontSize: '14px' }}>
                 {cartItem.quantity}
               </span>
               <button
-                onClick={() => handleQuantityChange(cartItem.quantity + 1)}
-                className="w-6 h-6 rounded-full flex items-center justify-center transition-colors hover:bg-[var(--gray-100)] disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={isUpdating}
+                onClick={() => onUpdateQuantity(cartItem.id, cartItem.quantity + 1)}
+                className="w-6 h-6 rounded-full flex items-center justify-center transition-colors hover:bg-[var(--gray-100)]"
               >
-                {isUpdating ? (
-                  <Loader2 className="w-3 h-3 animate-spin" style={{ color: 'var(--gray-700)' }} />
-                ) : (
-                  <Plus className="w-3 h-3" style={{ color: 'var(--gray-700)' }} />
-                )}
+                <Plus className="w-3 h-3" style={{ color: 'var(--gray-700)' }} />
               </button>
             </div>
 

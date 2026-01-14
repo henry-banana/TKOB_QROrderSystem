@@ -1,58 +1,67 @@
 'use client'
 
+import { useCartStore } from '@/stores/cart.store'
 import { useMemo } from 'react'
-import { useCart as useCartApi, useCartMutations } from '@/hooks/useCartApi'
-import { TAX_RATE, SERVICE_CHARGE_RATE } from '@/lib/constants'
-import { mapCartItemDtoToCartItem } from '@/lib/mappers/cart-mapper'
 
-/**
- * Main cart hook - uses server-driven cart via React Query
- * Provides computed totals and simplified API
- */
 export function useCart() {
-  const { data: cartResponse, isLoading, error } = useCartApi()
-  const { addToCart, updateItem, removeItem, clearCart } = useCartMutations()
+  const {
+    items,
+    addItem,
+    updateQuantity,
+    removeItem,
+    clearCart,
+    getItemCount,
+  } = useCartStore()
 
-  const cart = cartResponse?.data
-  const rawItems = cart?.items ?? []
-  
-  // Map backend DTOs to frontend CartItem type
-  const items = useMemo(() => rawItems.map(mapCartItemDtoToCartItem), [rawItems])
-
-  // Calculate totals (server also provides these, we use server values)
   const totals = useMemo(() => {
-    if (cart) {
-      return {
-        subtotal: cart.subtotal,
-        tax: cart.tax,
-        serviceCharge: cart.serviceCharge,
-        total: cart.total,
-      }
-    }
-    
-    // Fallback calculation if server data not available
     const subtotal = items.reduce((sum, item) => {
-      const itemPrice = item.menuItem.basePrice * item.quantity;
-      return sum + itemPrice;
+      // Get base price from menuItem
+      let itemPrice = item.menuItem.basePrice
+
+      // Add size price if selected
+      if (item.selectedSize && item.menuItem.sizes) {
+        const sizeOption = item.menuItem.sizes.find(s => s.size === item.selectedSize)
+        if (sizeOption) {
+          itemPrice = sizeOption.price
+        }
+      }
+
+      // Add toppings price
+      if (item.selectedToppings.length > 0 && item.menuItem.toppings) {
+        const toppingsPrice = item.selectedToppings.reduce((tSum: number, toppingId: string) => {
+          const topping = item.menuItem.toppings?.find(t => t.id === toppingId)
+          return tSum + (topping?.price || 0)
+        }, 0)
+        itemPrice += toppingsPrice
+      }
+
+      const itemTotal = itemPrice * item.quantity
+      return sum + itemTotal
     }, 0)
-    const tax = subtotal * TAX_RATE
-    const serviceCharge = subtotal * SERVICE_CHARGE_RATE
+
+    const tax = subtotal * 0.1 // 10% tax
+    const serviceCharge = subtotal * 0.05 // 5% service charge
     const total = subtotal + tax + serviceCharge
 
-    return { subtotal, tax, serviceCharge, total }
-  }, [cart, items])
+    return {
+      subtotal,
+      tax,
+      serviceCharge,
+      total,
+    }
+  }, [items])
 
-  const itemCount = cart?.itemCount ?? items.length
+  const itemCount = useMemo(() => {
+    return getItemCount()
+  }, [items, getItemCount])
 
   return {
     items,
     itemCount,
-    isLoading,
-    error,
-    addToCart: addToCart.mutate,
-    updateQuantity: (itemId: string, quantity: number) => updateItem.mutate({ itemId, quantity }),
-    removeItem: (itemId: string) => removeItem.mutate(itemId),
-    clearCart: clearCart.mutate,
+    addItem,
+    updateQuantity,
+    removeItem,
+    clearCart,
     ...totals,
   }
 }

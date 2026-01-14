@@ -4,13 +4,12 @@
  */
 
 import { isMockEnabled } from '@/shared/config/featureFlags';
-import { ordersApi } from './api-orders.adapter';
-import { ordersMock } from './mock-orders.adapter';
-import type { IOrdersAdapter } from './orders-adapter.interface';
+import { ordersApi } from './api/api-orders.adapter';
+import { ordersMock } from './mocks/mock-orders.adapter';
+import type { IOrdersAdapter } from './adapter.interface';
 
 function createOrdersAdapter(): IOrdersAdapter {
   const useMock = isMockEnabled('orders');
-  console.log('[OrdersFactory] Mock enabled:', useMock);
   return useMock ? ordersMock : ordersApi;
 }
 

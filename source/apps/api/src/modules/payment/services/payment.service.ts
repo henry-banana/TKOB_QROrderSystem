@@ -9,11 +9,17 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/database/prisma.service';
 import { RedisService } from '@/modules/redis/redis.service';
 import { OrderGateway } from '@/modules/websocket/gateways/order.gateway';
+import { PaymentConfigService } from '@/modules/payment-config/payment-config.service';
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
 import { PaymentIntentResponseDto } from '../dto/payment-intent-response.dto';
 import { PaymentStatusResponseDto } from '../dto/payment-status-response.dto';
 import { PaymentWebhookDto } from '../dto/payment-webhook.dto';
-import { SepayProvider } from '../providers/sepay.provider';
+import { 
+  CheckPaymentResponseDto, 
+  PollTransactionsResponseDto,
+  SepayTransactionDto,
+} from '../dto/poll-transactions.dto';
+import { SepayProvider, SepayTransaction } from '../providers/sepay.provider';
 import { PaymentMethod, PaymentStatus, OrderStatus } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import {
@@ -35,6 +41,7 @@ export class PaymentService {
     private readonly configService: ConfigService,
     private readonly redis: RedisService,
     private readonly orderGateway: OrderGateway,
+    private readonly paymentConfigService: PaymentConfigService,
   ) {
     this.paymentExpiryMinutes =
       this.configService.get<number>('payment.paymentExpiryMinutes') || 15;
@@ -123,9 +130,24 @@ export class PaymentService {
         );
       }
 
-      // 4. Generate payment intent from SePay provider
+      // 4. Get tenant's SePay config for customer payments
+      const tenantConfig = await this.paymentConfigService.getInternalConfig(tenantId);
+      
+      if (!tenantConfig || !tenantConfig.sepayEnabled) {
+        throw new BadRequestException(
+          `Tenant ${tenantId} has not configured SePay payment. Please configure payment settings first.`,
+        );
+      }
+
+      if (!tenantConfig.sepayAccountNo || !tenantConfig.sepayBankCode) {
+        throw new BadRequestException(
+          `Tenant ${tenantId} SePay config incomplete. Missing account number or bank code.`,
+        );
+      }
+
+      // 5. Generate payment intent from SePay provider using tenant's bank account
       this.logger.debug(
-        `[${tenantId}] Calling SePay provider to generate payment intent`,
+        `[${tenantId}] Calling SePay provider with tenant config - Bank: ${tenantConfig.sepayBankCode}`,
       );
 
       const paymentIntent = await this.sepayProvider.createPaymentIntent(
@@ -138,9 +160,16 @@ export class PaymentService {
           returnUrl: dto.returnUrl,
           cancelUrl: dto.cancelUrl,
         },
+        {
+          // Pass tenant's bank config so QR directs payment to tenant's account
+          accountNumber: tenantConfig.sepayAccountNo,
+          accountName: tenantConfig.sepayAccountName || undefined,
+          bankCode: tenantConfig.sepayBankCode,
+          apiKey: tenantConfig.sepayApiKey || undefined,
+        },
       );
 
-      // 5. Create Payment record
+      // 6. Create Payment record
       const expiresAt = new Date(Date.now() + this.paymentExpiryMinutes * 60 * 1000);
 
       const payment = await tx.payment.create({
@@ -165,7 +194,7 @@ export class PaymentService {
         `[${tenantId}] Payment created: ${payment.id} for order ${order.orderNumber} - Amount: ${amount} VND - Expires: ${expiresAt.toISOString()}`,
       );
 
-      // 6. Return response DTO
+      // 7. Return response DTO
       return {
         paymentId: payment.id,
         orderId: payment.orderId,
@@ -477,5 +506,304 @@ export class PaymentService {
         message: `Payment ${isSuccess ? 'completed' : 'failed'} successfully`,
       };
     });
+  }
+
+  /**
+   * Poll SePay for recent transactions and check if any match pending payments
+   * 
+   * This is a fallback mechanism when webhook is not available (e.g., local development).
+   * Frontend can call this endpoint every few seconds to check for payment completion.
+   * 
+   * @param transferContent - Optional: specific transfer content to search for
+   * @param limit - Number of recent transactions to fetch
+   * @returns Poll result with transactions and match status
+   */
+  async pollTransactions(
+    transferContent?: string,
+    limit: number = 20,
+  ): Promise<PollTransactionsResponseDto> {
+    this.logger.log(`Polling SePay transactions (content: ${transferContent || 'all'}, limit: ${limit})`);
+
+    try {
+      const transactions = await this.sepayProvider.pollTransactions(limit);
+
+      const response: PollTransactionsResponseDto = {
+        success: true,
+        transactions: transactions.map(this.mapSepayTransaction),
+        polledAt: new Date(),
+      };
+
+      // If specific transfer content provided, check for match
+      if (transferContent) {
+        const matched = transactions.find((tx) =>
+          tx.transferContent.toUpperCase().includes(transferContent.toUpperCase()),
+        );
+
+        if (matched) {
+          response.matchedTransaction = this.mapSepayTransaction(matched);
+          
+          // Try to process this payment automatically
+          const processed = await this.processPolledTransaction(matched);
+          response.paymentProcessed = processed;
+        }
+      }
+
+      return response;
+    } catch (error) {
+      this.logger.error(`Failed to poll transactions: ${error.message}`);
+      return {
+        success: false,
+        transactions: [],
+        polledAt: new Date(),
+      };
+    }
+  }
+
+  /**
+   * Check and process a specific payment by ID using SePay polling
+   * 
+   * This checks if a pending payment has been paid by polling SePay API.
+   * If payment is found, it updates the payment and order status.
+   * 
+   * @param paymentId - Payment ID to check
+   * @returns Check result with payment status
+   */
+  async checkPaymentViaPoll(paymentId: string): Promise<CheckPaymentResponseDto> {
+    this.logger.log(`Checking payment via poll: ${paymentId}`);
+
+    // Get payment from database
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      include: {
+        order: {
+          select: {
+            id: true,
+            orderNumber: true,
+            tenantId: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      return {
+        found: false,
+        completed: false,
+        message: 'Payment not found',
+      };
+    }
+
+    // If already completed, return current status
+    if (payment.status === PaymentStatus.COMPLETED) {
+      return {
+        found: true,
+        status: payment.status,
+        completed: true,
+        message: 'Payment already completed',
+      };
+    }
+
+    // If expired, return error
+    if (payment.expiresAt < new Date()) {
+      return {
+        found: true,
+        status: PaymentStatus.FAILED,
+        completed: false,
+        message: 'Payment expired',
+      };
+    }
+
+    // Poll SePay for matching transaction
+    const transferContent = payment.transferContent;
+    if (!transferContent) {
+      return {
+        found: true,
+        status: payment.status,
+        completed: false,
+        message: 'Payment has no transfer content',
+      };
+    }
+
+    try {
+      const matchedTx = await this.sepayProvider.findTransactionByContent(
+        transferContent,
+        50, // Search last 50 transactions
+      );
+
+      if (!matchedTx) {
+        return {
+          found: true,
+          status: payment.status,
+          completed: false,
+          message: 'Payment not yet received. Please complete the bank transfer.',
+        };
+      }
+
+      // Validate amount
+      const expectedAmount = payment.amount.toNumber();
+      if (Math.abs(matchedTx.amount - expectedAmount) > 1) {
+        this.logger.warn(
+          `Amount mismatch for payment ${paymentId}: expected ${expectedAmount}, got ${matchedTx.amount}`,
+        );
+        return {
+          found: true,
+          status: payment.status,
+          completed: false,
+          transaction: this.mapSepayTransaction(matchedTx),
+          message: `Amount mismatch: expected ${expectedAmount} VND, received ${matchedTx.amount} VND`,
+        };
+      }
+
+      // Process the payment
+      await this.processMatchedPayment(payment, matchedTx);
+
+      return {
+        found: true,
+        status: PaymentStatus.COMPLETED,
+        completed: true,
+        transaction: this.mapSepayTransaction(matchedTx),
+        message: 'Payment completed successfully!',
+      };
+    } catch (error) {
+      this.logger.error(`Failed to check payment via poll: ${error.message}`);
+      return {
+        found: true,
+        status: payment.status,
+        completed: false,
+        message: `Error checking payment: ${error.message}`,
+      };
+    }
+  }
+
+  /**
+   * Process a matched transaction from polling
+   */
+  private async processPolledTransaction(tx: SepayTransaction): Promise<boolean> {
+    try {
+      // Find payment by transfer content
+      const payment = await this.prisma.payment.findFirst({
+        where: {
+          transferContent: {
+            contains: tx.transferContent,
+            mode: 'insensitive',
+          },
+          status: PaymentStatus.PENDING,
+        },
+        include: {
+          order: true,
+        },
+      });
+
+      if (!payment) {
+        this.logger.debug(`No pending payment found for transaction: ${tx.transferContent}`);
+        return false;
+      }
+
+      await this.processMatchedPayment(payment, tx);
+      return true;
+    } catch (error) {
+      this.logger.error(`Failed to process polled transaction: ${error.message}`);
+      return false;
+    }
+  }
+
+  /**
+   * Process a matched payment (update status, order, emit events)
+   */
+  private async processMatchedPayment(
+    payment: any,
+    tx: SepayTransaction,
+  ): Promise<void> {
+    this.logger.log(`Processing matched payment: ${payment.id} - Transaction: ${tx.id}`);
+
+    await this.prisma.$transaction(async (prisma) => {
+      // Update payment
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: PaymentStatus.COMPLETED,
+          transactionId: tx.id,
+          paidAt: tx.transactionTime,
+          providerData: {
+            ...(payment.providerData as any),
+            polledTransaction: {
+              id: tx.id,
+              amount: tx.amount,
+              bankCode: tx.bankCode,
+              senderName: tx.senderName,
+              transactionTime: tx.transactionTime,
+              processedAt: new Date().toISOString(),
+              method: 'polling',
+            },
+          },
+        },
+      });
+
+      // Update order
+      const newOrderStatus =
+        payment.order.status === OrderStatus.PENDING
+          ? OrderStatus.RECEIVED
+          : payment.order.status;
+
+      await prisma.order.update({
+        where: { id: payment.orderId },
+        data: {
+          paymentStatus: PaymentStatus.COMPLETED,
+          paidAt: tx.transactionTime,
+          status: newOrderStatus,
+        },
+      });
+
+      // Create status history if status changed
+      if (newOrderStatus !== payment.order.status) {
+        await prisma.orderStatusHistory.create({
+          data: {
+            orderId: payment.orderId,
+            status: newOrderStatus,
+            notes: `Order status auto-updated after payment confirmed via polling. Transaction: ${tx.id}`,
+          },
+        });
+      }
+    });
+
+    // Invalidate cache
+    await this.redis.del(`${this.CACHE_PREFIX}${payment.id}`);
+
+    // Emit WebSocket event
+    this.orderGateway.emitPaymentCompleted(payment.order.tenantId, payment.orderId, {
+      id: payment.id,
+      status: PaymentStatus.COMPLETED,
+      amount: payment.amount.toNumber(),
+      transactionId: tx.id,
+      paidAt: tx.transactionTime,
+      orderNumber: payment.order.orderNumber,
+      method: 'polling',
+    });
+
+    this.logger.log(`Payment ${payment.id} completed via polling - Transaction: ${tx.id}`);
+  }
+
+  /**
+   * Map SePay transaction to DTO
+   */
+  private mapSepayTransaction(tx: SepayTransaction): SepayTransactionDto {
+    return {
+      id: tx.id,
+      amount: tx.amount,
+      accountNumber: tx.accountNumber,
+      transferContent: tx.transferContent,
+      transactionTime: tx.transactionTime,
+      bankCode: tx.bankCode,
+      senderAccountNumber: tx.senderAccountNumber,
+      senderName: tx.senderName,
+    };
+  }
+
+  /**
+   * Get SePay provider instance (for subscription payments)
+   */
+  getSepayProvider(): SepayProvider {
+    return this.sepayProvider;
   }
 }

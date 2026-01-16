@@ -14,15 +14,15 @@ import type { KdsOrdersResponse, KdsStatsResponse } from './types'
  * All endpoints require JWT authentication
  */
 class KdsApiAdapter implements IKdsAdapter {
-  private baseUrl = '/admin/kds'
+  private baseUrl = '/api/v1/admin/kds'
 
   /**
    * Get all active KDS orders (flattened from priority groups)
    * GET /admin/kds/orders/active
    */
   async getKdsOrders(): Promise<KdsOrder[]> {
-    const response = await api.get<KdsOrdersResponse>(`${this.baseUrl}/orders/active`)
-    return flattenPriorityOrders(response.data)
+    const response = await api.get<{ data: KdsOrdersResponse }>(`${this.baseUrl}/orders/active`)
+    return flattenPriorityOrders(response.data.data)
   }
 
   /**
@@ -30,14 +30,15 @@ class KdsApiAdapter implements IKdsAdapter {
    * GET /admin/kds/stats
    */
   async getStats(): Promise<KdsStats> {
-    const response = await api.get<KdsStatsResponse>(`${this.baseUrl}/stats`)
+    const response = await api.get<{ data: KdsStatsResponse }>(`${this.baseUrl}/stats`)
+    const stats = response.data.data
     return {
-      totalActive: response.data.totalActive,
-      urgent: response.data.urgent,
-      high: response.data.high,
-      normal: response.data.normal,
-      avgPrepTime: response.data.avgPrepTime,
-      todayCompleted: response.data.todayCompleted,
+      totalActive: stats.totalActive,
+      urgent: stats.urgent,
+      high: stats.high,
+      normal: stats.normal,
+      avgPrepTime: stats.avgPrepTime,
+      todayCompleted: stats.todayCompleted,
     }
   }
 

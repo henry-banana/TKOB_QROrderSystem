@@ -33,7 +33,7 @@ export function KdsBoardPage({
   const controller = useKdsController({ showKdsProfile, enableKitchenServe });
 
   // ========== WEBSOCKET (Real-time updates) ==========
-  const { isConnected, newOrderCount } = useKdsWebSocket({
+  const { status, isConnected, newOrderCount } = useKdsWebSocket({
     tenantId: user?.tenantId || '',
     soundEnabled: controller.soundEnabled,
     autoConnect: true,
@@ -52,20 +52,39 @@ export function KdsBoardPage({
     wsConnected: isConnected,
   });
 
-  // Visual indicator for WebSocket connection
+  // Visual indicator for WebSocket connection status
   useEffect(() => {
-    if (!isConnected) {
-      controller.setToastMessage('Mất kết nối WebSocket - đang kết nối lại...');
+    // Only show error toast if truly disconnected (not during initial connecting)
+    if (status === 'disconnected' && !isConnected) {
+      controller.setToastMessage('Disconnected from server. Attempting to reconnect...');
       controller.setShowErrorToast(true);
+      
+      // Auto-hide error toast after 5 seconds
+      const timer = setTimeout(() => {
+        controller.setShowErrorToast(false);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
     }
-  }, [isConnected]);
+    
+    // Hide error toast when reconnected
+    if (isConnected) {
+      controller.setShowErrorToast(false);
+    }
+  }, [status, isConnected]);
 
   // ========== RENDER ==========
   return (
     <div className="min-h-screen bg-primary">
-      {/* WebSocket Connection Status */}
-      {!isConnected && (
+      {/* WebSocket Connection Status Indicator */}
+      {status === 'connecting' && (
+        <div className="fixed top-0 left-0 right-0 h-1 bg-yellow-500 z-50 animate-pulse" />
+      )}
+      {status === 'disconnected' && (
         <div className="fixed top-0 left-0 right-0 h-1 bg-red-500 z-50 animate-pulse" />
+      )}
+      {status === 'error' && (
+        <div className="fixed top-0 left-0 right-0 h-1 bg-orange-500 z-50 animate-pulse" />
       )}
 
       {/* Header */}
@@ -76,6 +95,7 @@ export function KdsBoardPage({
         showKdsProfile={controller.showKdsProfile}
         isUserMenuOpen={controller.isUserMenuOpen}
         userMenuRef={controller.userMenuRef}
+        connectionStatus={status}
         onToggleSound={controller.handleToggleSound}
         onToggleAutoRefresh={controller.handleToggleAutoRefresh}
         onToggleUserMenu={controller.handleToggleUserMenu}

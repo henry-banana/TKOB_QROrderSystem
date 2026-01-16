@@ -155,10 +155,17 @@ export function useTableGridController(): UseTableGridControllerReturn {
   }, [updateStatusMutation]);
 
   const startManualOrder = useCallback((tableId: string) => {
-    // Navigate to manual order page or open modal
-    logger.info('Start manual order for table', { tableId });
-    // TODO: Implement navigation or modal
-  }, []);
+    const table = tables.find(t => t.id === tableId);
+    if (!table) return;
+    
+    logger.info('[waiter] START_MANUAL_ORDER', { tableId, tableNumber: table.tableNumber });
+    
+    // Navigate to manual order page with table context
+    // Note: Manual order page should be created at /admin/waiter/orders/new
+    if (typeof window !== 'undefined') {
+      window.location.href = `/admin/waiter/orders/new?tableId=${tableId}&tableNumber=${table.tableNumber}`;
+    }
+  }, [tables]);
 
   const refresh = useCallback(() => {
     refetch();

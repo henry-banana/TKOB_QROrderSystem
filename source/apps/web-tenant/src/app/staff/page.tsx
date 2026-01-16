@@ -1,9 +1,9 @@
 import { RoleGuard } from '@/shared/guards';
 import { StaffPage } from '@/features/staff';
 
-export default function Staff() {
+export default function StaffFullscreen() {
   return (
-    <RoleGuard allowedRoles={['admin']}>
+    <RoleGuard allowedRoles={['waiter', 'admin']}>
       <StaffPage />
     </RoleGuard>
   );

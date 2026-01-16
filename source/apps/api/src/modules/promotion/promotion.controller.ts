@@ -28,8 +28,11 @@ import {
 } from './dto/promotion.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { TenantOwnershipGuard } from '../tenant/guards/tenant-ownership.guard';
+import { FeatureGuard, RequireFeature } from '../subscription/guards/feature.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { GetTenant } from '../../common/decorators/tenant.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { UserRole } from '@prisma/client';
 
 @ApiTags('Promotions')
@@ -40,11 +43,13 @@ export class PromotionController {
   // ==================== Admin Endpoints ====================
 
   @Post('admin/promotions')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, TenantOwnershipGuard, FeatureGuard)
   @Roles(UserRole.OWNER, UserRole.STAFF)
+  @RequireFeature('promotions')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new promotion' })
   @ApiResponse({ status: 201, type: PromotionResponseDto })
+  @ApiResponse({ status: 403, description: 'Promotions feature not available in your plan' })
   async createPromotion(
     @GetTenant() tenantId: string,
     @Body() dto: CreatePromotionDto,
@@ -53,7 +58,7 @@ export class PromotionController {
   }
 
   @Get('admin/promotions')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, TenantOwnershipGuard)
   @Roles(UserRole.OWNER, UserRole.STAFF)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List all promotions' })
@@ -65,7 +70,7 @@ export class PromotionController {
   }
 
   @Get('admin/promotions/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, TenantOwnershipGuard)
   @Roles(UserRole.OWNER, UserRole.STAFF)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get a single promotion' })
@@ -79,8 +84,9 @@ export class PromotionController {
   }
 
   @Put('admin/promotions/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, TenantOwnershipGuard, FeatureGuard)
   @Roles(UserRole.OWNER, UserRole.STAFF)
+  @RequireFeature('promotions')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a promotion' })
   @ApiParam({ name: 'id', description: 'Promotion ID' })
@@ -94,7 +100,7 @@ export class PromotionController {
   }
 
   @Delete('admin/promotions/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, TenantOwnershipGuard)
   @Roles(UserRole.OWNER, UserRole.STAFF)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a promotion (only if never used)' })
@@ -111,6 +117,7 @@ export class PromotionController {
   // ==================== Customer Endpoints ====================
 
   @Post('checkout/validate-promo')
+  @Public()
   @ApiOperation({ summary: 'Validate a promotion code at checkout' })
   @ApiQuery({ name: 'tenantId', description: 'Tenant ID' })
   @ApiResponse({ status: 200, type: ValidatePromoResponseDto })

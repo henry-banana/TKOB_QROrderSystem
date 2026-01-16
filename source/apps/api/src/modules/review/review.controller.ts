@@ -25,8 +25,10 @@ import {
 } from './dto/review.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
+import { TenantOwnershipGuard } from '../tenant/guards/tenant-ownership.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { GetTenant } from '../../common/decorators/tenant.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 import { UserRole } from '@prisma/client';
 
 @ApiTags('Reviews')
@@ -37,6 +39,7 @@ export class ReviewController {
   // ==================== Customer Endpoints ====================
 
   @Post('orders/:orderId/items/:itemId/review')
+  @Public()
   @ApiOperation({ summary: 'Create or update a review for an order item' })
   @ApiParam({ name: 'orderId', description: 'Order ID' })
   @ApiParam({ name: 'itemId', description: 'Order Item ID' })
@@ -60,6 +63,7 @@ export class ReviewController {
   }
 
   @Get('orders/:orderId/reviews')
+  @Public()
   @ApiOperation({ summary: 'Get all reviews for an order' })
   @ApiParam({ name: 'orderId', description: 'Order ID' })
   @ApiQuery({ name: 'tenantId', description: 'Tenant ID' })
@@ -72,6 +76,7 @@ export class ReviewController {
   }
 
   @Get('menu-items/:menuItemId/reviews')
+  @Public()
   @ApiOperation({ summary: 'Get review statistics for a menu item' })
   @ApiParam({ name: 'menuItemId', description: 'Menu Item ID' })
   @ApiQuery({ name: 'tenantId', description: 'Tenant ID' })
@@ -86,7 +91,7 @@ export class ReviewController {
   // ==================== Admin Endpoints ====================
 
   @Get('admin/reviews/stats')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, TenantOwnershipGuard)
   @Roles(UserRole.OWNER, UserRole.STAFF)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get tenant-wide review statistics' })
@@ -98,7 +103,7 @@ export class ReviewController {
   }
 
   @Get('admin/reviews')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard, TenantOwnershipGuard)
   @Roles(UserRole.OWNER, UserRole.STAFF)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get recent reviews for tenant' })

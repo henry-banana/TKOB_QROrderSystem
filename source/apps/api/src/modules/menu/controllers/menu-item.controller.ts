@@ -11,7 +11,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/modules/auth/guards/roles.guard';
 import { TenantOwnershipGuard } from 'src/modules/tenant/guards/tenant-ownership.guard';
@@ -29,6 +29,7 @@ import {
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 import { MenuItemResponseDto } from '../dto/menu-response.dto';
+import { SkipTransform } from 'src/common/interceptors/transform.interceptor';
 
 @ApiTags('Menu - Items')
 @Controller('menu/item')
@@ -79,8 +80,10 @@ export class MenuItemsController {
   // DELETE:
   @Delete(':id')
   @Roles(UserRole.OWNER)
+  @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Delete (archive) menu item' })
+  @SkipTransform()
+  @ApiOperation({ summary: 'Archive menu item' })
   @ApiResponse({ status: 204 })
   async delete(@Param('id') id: string) {
     await this.menuItemsService.delete(id);

@@ -1,14 +1,30 @@
-// Cart API Service - calls backend cart endpoints
+/**
+ * Cart API Service
+ * Uses Orval-generated API functions for type-safe cart operations
+ * 
+ * Architecture (Refactored):
+ * - Uses generated functions from @/services/generated/cart
+ * - Type-safe with auto-generated TypeScript types
+ * - Auto-sync with backend API changes
+ * 
+ * All cart operations are session-based (uses HttpOnly cookie)
+ * Backend associates cart with table session automatically
+ */
 
-import apiClient from '@/api/client';
+import {
+  cartControllerGetCart,
+  cartControllerAddToCart,
+  cartControllerUpdateItem,
+  cartControllerRemoveItem,
+  cartControllerClearCart,
+} from '@/services/generated/cart/cart';
+
 import { log, logError } from '@/shared/logging/logger';
 import type { CartResponse, AddToCartRequest, UpdateCartItemRequest } from './types';
 
 /**
  * Cart API Service
- * 
- * All cart operations are session-based (uses HttpOnly cookie)
- * Backend associates cart with table session automatically
+ * Singleton wrapper around generated cart API functions
  */
 export class CartApiService {
   private static instance: CartApiService;
@@ -27,9 +43,11 @@ export class CartApiService {
   async getCart(): Promise<CartResponse> {
     try {
       log('data', 'Fetching cart from server', {}, { feature: 'cart' });
-      const response = await apiClient.get<{ success: boolean; data: CartResponse }>('/cart');
-      log('data', 'Cart fetched', { itemCount: response.data.data.itemCount }, { feature: 'cart' });
-      return response.data.data;
+      
+      const cart = await cartControllerGetCart();
+      
+      log('data', 'Cart fetched', { itemCount: cart.itemCount }, { feature: 'cart' });
+      return cart;
     } catch (error) {
       logError('data', 'Failed to fetch cart', error, { feature: 'cart' });
       // Return empty cart on error (session might not exist yet)
@@ -48,12 +66,15 @@ export class CartApiService {
    * Creates cart if doesn't exist (backend handles this)
    */
   async addItem(request: AddToCartRequest): Promise<CartResponse> {
-    log('data', 'Adding item to cart', { menuItemId: request.menuItemId, quantity: request.quantity }, { feature: 'cart' });
+    log('data', 'Adding item to cart', { 
+      menuItemId: request.menuItemId, 
+      quantity: request.quantity 
+    }, { feature: 'cart' });
     
-    const response = await apiClient.post<{ success: boolean; data: CartResponse }>('/cart/items', request);
+    const cart = await cartControllerAddToCart(request);
     
-    log('data', 'Item added to cart', { itemCount: response.data.data.itemCount }, { feature: 'cart' });
-    return response.data.data;
+    log('data', 'Item added to cart', { itemCount: cart.itemCount }, { feature: 'cart' });
+    return cart;
   }
 
   /**
@@ -63,10 +84,10 @@ export class CartApiService {
   async updateItem(itemId: string, request: UpdateCartItemRequest): Promise<CartResponse> {
     log('data', 'Updating cart item', { itemId, quantity: request.quantity }, { feature: 'cart' });
     
-    const response = await apiClient.patch<{ success: boolean; data: CartResponse }>(`/cart/items/${itemId}`, request);
+    const cart = await cartControllerUpdateItem(itemId, request);
     
-    log('data', 'Cart item updated', { itemCount: response.data.data.itemCount }, { feature: 'cart' });
-    return response.data.data;
+    log('data', 'Cart item updated', { itemCount: cart.itemCount }, { feature: 'cart' });
+    return cart;
   }
 
   /**
@@ -75,10 +96,10 @@ export class CartApiService {
   async removeItem(itemId: string): Promise<CartResponse> {
     log('data', 'Removing cart item', { itemId }, { feature: 'cart' });
     
-    const response = await apiClient.delete<{ success: boolean; data: CartResponse }>(`/cart/items/${itemId}`);
+    const cart = await cartControllerRemoveItem(itemId);
     
-    log('data', 'Cart item removed', { itemCount: response.data.data.itemCount }, { feature: 'cart' });
-    return response.data.data;
+    log('data', 'Cart item removed', { itemCount: cart.itemCount }, { feature: 'cart' });
+    return cart;
   }
 
   /**
@@ -87,7 +108,7 @@ export class CartApiService {
   async clearCart(): Promise<void> {
     log('data', 'Clearing cart', {}, { feature: 'cart' });
     
-    await apiClient.delete('/cart');
+    await cartControllerClearCart();
     
     log('data', 'Cart cleared', {}, { feature: 'cart' });
   }

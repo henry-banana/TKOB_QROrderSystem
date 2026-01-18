@@ -1,10 +1,10 @@
-w# OpenAPI Specification – QR Dine‑in Ordering Platform
+# OpenAPI Specification – TKQR‑in Ordering Platform
 
-> Tài liệu này mô tả đầy đủ REST API của hệ thống QR Dine-in Ordering Platform theo chuẩn **OpenAPI 3.0**.
+> Tài liệu này mô tả đầy đủ REST API của hệ thống TKQR-in Ordering Platform theo chuẩn **OpenAPI 3.0**.
 
 - **Version**: 1.0.0
 - **Base URL**: `https://api.qr-ordering.com/v1`
-- **Last Updated**: 2025-01-11
+- **Last Updated**: 2025-23-11
 
 ---
 
@@ -15,13 +15,13 @@ w# OpenAPI Specification – QR Dine‑in Ordering Platform
 3. [Error Handling](#3-error-handling)
 4. [Rate Limiting](#4-rate-limiting)
 5. [Tenants API](#5-tenants-api)
-6. [Tables & QR API](#6-tables--qr-api)
-7. [Menu API](#7-menu-api)
-8. [Orders API](#8-orders-api)
-9. [Payments API](#9-payments-api)
-10. [Analytics API](#10-analytics-api)
-11. [Webhooks](#11-webhooks)
-12. [OpenAPI YAML Specification](#12-openapi-yaml-specification)
+<!-- 6. [Tables & QR API](#6-tables--qr-api)
+6. [Menu API](#7-menu-api)
+7. [Orders API](#8-orders-api)
+8. [Payments API](#9-payments-api)
+9. [Analytics API](#10-analytics-api)
+10. [Webhooks](#11-webhooks)
+11. [OpenAPI YAML Specification](#12-openapi-yaml-specification) -->
 
 ---
 
@@ -62,97 +62,266 @@ Accept: application/json
 
 ## 2. Authentication & Authorization
 
-### 2.1. Authentication Methods
+### 2.1. Authentication Flows (Owner & Staff)
 
-#### 2.1.1. JWT Bearer Token (Staff/Admin)
+Hệ thống sử dụng cơ chế **Stateful Session with JWT**.
 
-```http
-Authorization: Bearer <jwt_token>
-```
+- **Access Token**: Stateless JWT (ngắn hạn), chứa thông tin authorize.
+- **Refresh Token**: Stateful (được lưu hash trong bảng `USER_SESSION`), dùng để quản lý phiên đăng nhập và revoke quyền truy cập.
 
-**Token Claims**:
+#### 2.1.1. Registration Process (2-Step Flow)
+
+**Quy trình gồm 2 bước API chính**, sử dụng **Redis** làm bộ nhớ tạm để lưu thông tin đăng ký trong lúc chờ xác thực.
+
+**Step 1: Submit & Challenge (Gửi thông tin & Nhận OTP)**
+
+User nhập toàn bộ thông tin đăng ký. Hệ thống kiểm tra trùng lặp (Duplicate Check) trước, nếu hợp lệ thì lưu tạm vào Redis và gửi OTP.
+
+- **Endpoint**: `POST /auth/register/submit`
+- **Content-Type**: `application/json`
+
+**Request Body**:
+
 ```json
 {
-  "sub": "user_id",
-  "tenantId": "tenant_123",
-  "roles": ["admin", "waiter"],
+  "email": "owner@new-restaurant.com",
+  "password": "StrongPassword!123",
+  "fullName": "Nguyen Van A",
+  "tenantName": "Pho Ngon 123",
+  "slug": "pho-ngon-123" // Optional, nếu không gửi backend sẽ tự generate từ name
+}
+```
+
+**Backend Logic**:
+
+1. **Validation**: Kiểm tra format email, password complexity.
+2. **Uniqueness Check (Postgres)**:
+    - Kiểm tra `email` có trong bảng `USER` chưa?
+    - Kiểm tra `slug` có trong bảng `TENANT` chưa?
+    - *Nếu trùng*: Trả về `409 Conflict` ngay lập tức (kèm message chi tiết lỗi ở field nào).
+3. **Temporary Storage (Redis)**:
+    - Hash password.
+    - Generate OTP (6 số).
+    - Generate `registrationToken` (Random string, dùng làm key truy xuất Redis).
+    - Lưu object `{ email, password_hash, fullName, tenantName, slug, otp }` vào Redis với Key=`reg:{registrationToken}` và TTL=10 phút.
+4. **Send OTP**: Gửi email chứa OTP cho user.
+
+**Response: 200 OK**
+
+```json
+{
+  "message": "Validation successful. OTP sent to email.",
+  "registrationToken": "a1b2c3d4-e5f6-...", // Token dùng để submit OTP ở bước sau
+  "expiresIn": 600
+}
+```
+
+**Error Response (Ví dụ trùng Email): 409 Conflict**
+
+```json
+{
+  "error": {
+    "code": "CONFLICT",
+    "message": "Email already exists",
+    "details": { "field": "email" }
+  }
+}
+```
+
+---
+
+**Step 2: Confirm & Create (Xác thực OTP & Tạo tài khoản)**
+
+User nhập OTP nhận được để hoàn tất. Dữ liệu sẽ được chuyển từ Redis sang Postgres.
+
+- **Endpoint**: `POST /auth/register/confirm`
+- **Content-Type**: `application/json`
+
+**Request Body**:
+
+```json
+{
+  "registrationToken": "a1b2c3d4-e5f6-...", // Nhận được từ Step 1
+  "otp": "123456"
+}
+```
+
+**Backend Logic**:
+
+1. **Retrieve**: Dùng `registrationToken` lấy dữ liệu tạm từ Redis. Nếu không thấy -> Lỗi `400` (Token hết hạn hoặc không tồn tại).
+2. **Verify OTP**: So khớp `otp` user gửi lên với `otp` trong Redis.
+3. **Transactional Write (Postgres)**:
+    - Insert `TENANT` (dùng dữ liệu từ Redis).
+    - Insert `USER` (dùng email, password_hash từ Redis).
+    - Insert `USER_SESSION` (Login luôn cho user).
+4. **Cleanup**: Xóa key trong Redis.
+5. **Token Generation**: Tạo Access/Refresh Token.
+
+**Response: 201 Created**
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1Ni...",
+  "refreshToken": "d792f321-...",
+  "expiresIn": 3600
+  "user": {
+    "id": "uuid-user-1",
+    "email": "owner@new-restaurant.com",
+    "role": "OWNER",
+    "fullName": "Nguyen Van A"
+  },
+  "tenant": {
+    "id": "uuid-tenant-1",
+    "name": "Pho Ngon 123",
+    "slug": "pho-ngon-123",
+    "status": "ACTIVE",
+    "onboardingStep": 1
+  }
+}
+```
+
+#### 2.1.2. Login (Session Creation)
+
+Dành cho User đã tồn tại trong DB.
+
+```json
+POST /auth/login
+Content-Type: application/json
+
+{
+  "email": "staff@restaurant.com",
+  "password": "user_password",
+  "deviceInfo": "Chrome 120 on MacOS" // Required for USER_SESSION tracking
+}
+
+Response: 200 OK
+{
+  "accessToken": "eyJhbGciOiJIUzI1Ni...",
+  "refreshToken": "d792f321-...",
+  "expiresIn": 3600,
+  "user": {
+    "id": "uuid-user-1",
+    "email": "owner@restaurant.com",
+    "fullName": "Nguyen Van A",
+    "role": "OWNER",
+    "tenantId": "uuid-tenant-1"
+  },
+  "tenant": {
+    "id": "uuid-tenant-1",
+    "name": "Pho Ngon 123",
+    "slug": "pho-ngon-123",
+    "status": "ACTIVE",
+    "onboardingStep": 1
+  }
+}
+```
+
+#### 2.1.3. Refresh Token (Session Renewal)
+
+Dùng `refreshToken` để lấy `accessToken` mới. Backend sẽ check bảng `USER_SESSION`.
+
+```json
+POST /auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "82a1b2c3-..."
+}
+
+Response: 200 OK
+{
+  "accessToken": "eyJhbGciOiJIUzI1Ni...",
+  "expiresIn": 3600
+}
+```
+
+#### 2.1.4. Logout
+
+Dùng `refreshToken` để đăng xuất khỏi chính xác thiết bị thực hiện `logout` (bằng cách so sánh `refreshToken`)
+
+```json
+POST /auth/logout
+Content-Type: application/json
+
+{
+  "refreshToken": "82a1b2c3-..."
+}
+
+Response: 200 OK
+
+```
+#### 2.1.5. Get Current User Profile
+
+Lấy thông tin user hiện tại từ access token. Yêu cầu gửi access token hợp lệ qua header `Authorization: Bearer <accessToken>`. Backend sẽ giải mã JWT và trả về thông tin user.
+
+```http
+GET /auth/me
+Authorization: Bearer <accessToken>
+Accept: application/json
+```
+
+**Response: 200 OK**
+```json
+{
+  "user": {
+    "id": "81aa5006-9ed9-401e-9b63-acca4d9ee5e8",
+    "email": "nphuchoang.itus@gmail.com",
+    "role": "OWNER",
+    "tenantId": "4782895c-79b7-445a-826a-5534af3b8589"
+  }
+}
+```
+
+- Nếu access token không hợp lệ hoặc hết hạn sẽ trả về:
+```json
+{
+  "message": "Unauthorized",
+  "statusCode": 401
+}
+```
+
+**Chú thích:**  
+- Endpoint này dùng để lấy thông tin user đang đăng nhập, thường dùng cho trang profile hoặc kiểm tra trạng thái đăng nhập.  
+- Không cần truyền thêm tham số nào ngoài access token.
+
+### 2.2. Token Claims & Authorization
+
+#### 2.2.1. JWT Access Token Structure (Staff/Owner)
+
+Payload của Access Token phản ánh trực tiếp dữ liệu từ bảng `USER`.
+
+```json
+{
+  "sub": "uuid-user-1", // Mapping to USER.id
+  "email": "owner@rest.com", // Mapping to USER.email
+  "role": "OWNER", // Mapping to USER.role (Enum)
+  "tenantId": "uuid-tenant-1", // Mapping to USER.tenant_id
+  "sid": "uuid-session-99", // Mapping to USER_SESSION.id (để support logout/revoke)
   "iat": 1704960000,
   "exp": 1704963600
 }
 ```
 
-**Obtain Token**:
-```http
-POST /auth/login
-Content-Type: application/json
+#### 2.2.2. Role-Based Access Control (RBAC)
 
-{
-  "email": "admin@restaurant.com",
-  "password": "secure_password"
-}
+Dựa trên Enum `role` trong Database:
+_Đối với Super Admin: Không cần registry (liên hệ bên cung cấp sản phẩm để đăng ký tài khoản, login như các role dưới)_
 
-Response:
-{
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "expiresIn": 3600,
-  "tokenType": "Bearer"
-}
-```
+| **Role (DB Enum)** | **Description**   | **Permissions**                                                          |
+| ------------------ | ----------------- | ------------------------------------------------------------------------ |
+| **OWNER**          | Chủ nhà hàng      | Full CRUD on Tenant, Users, Menu, Payment Config. (Tương đương Admin cũ) |
+| **STAFF**          | Nhân viên phục vụ | Read Menu, Create/Update Orders, Payment Status.                         |
+| **KITCHEN**        | Đầu bếp/Bar       | Read Orders (Real-time), Update Order State (Preparing -> Ready).        |
 
-#### 2.1.2. QR Token (Customer – Public Menu Access)
+### 2.3. Tenant Isolation Strategy
 
-```http
-X-QR-Token: <signed_qr_token>
-```
+Để đảm bảo tính toàn vẹn dữ liệu giữa các Tenant (Multi-tenancy):
 
-**Token Structure**:
-```json
-{
-  "tid": "tenant_123",
-  "tbl": "table_5",
-  "exp": 1735689600,
-  "sig": "base64_signature"
-}
-```
-
-**Usage**: Embedded trong QR code URL
-```
-https://app.qr-ordering.com/menu?token=eyJ0aWQiOiJ0...
-```
-
-### 2.2. Authorization Scopes
-
-| Role | Permissions |
-|------|-------------|
-| **Customer** | Read menu, Create order (own table) |
-| **Waiter** | Read orders (tenant), Update order state |
-| **Kitchen** | Read orders (tenant), Update order state (Preparing/Ready) |
-| **Admin** | Full CRUD on tenant resources |
-| **Super Admin** | Cross-tenant access (platform management) |
-
-### 2.3. Tenant Isolation
-
-Mọi request phải bao gồm tenant context:
-
-**Option 1: Via JWT Claims**
-```json
-{
-  "tenantId": "tenant_123"
-}
-```
-
-**Option 2: Via Header (fallback)**
-```http
-X-Tenant-ID: tenant_123
-```
-
-**Backend Enforcement**:
-- Middleware extract `tenantId` từ token/header
-- All queries filter by `tenantId`
-- Row-Level Security (RLS) nếu dùng PostgreSQL
-
----
+1. **Extraction**: Middleware `AuthGuard` sẽ extract `tenantId` từ JWT (đối với Staff) hoặc từ QR Token (đối với Customer).
+2. **Context Injection**: `tenantId` được gán vào `Request Context` (ví dụ: `req.user.tenantId`).
+3. **Database Query**: Mọi query xuống Postgres **bắt buộc** phải có mệnh đề `WHERE tenant_id = ...`. Sử dụng chiến lược Defense in Depth với 2 lớp bảo vệ:
+    - Application Logic: Middleware của ORM sẽ tự động chèn điều kiện `WHERE tenant_id = <current_tenant>` vào tất cả các câu lệnh `find`, `update`, `delete` trước khi gửi xuống DB.
+    - Database RLS (Row-Level Security): Ngay cả khi tầng Application có lỗi (bug ở middleware, quên filter), Database sẽ chặn truy cập nếu`tenant_id` của dòng dữ liệu không khớp với session context hiện tại.
 
 ## 3. Error Handling
 
@@ -175,17 +344,17 @@ X-Tenant-ID: tenant_123
 
 ### 3.2. Standard Error Codes
 
-| HTTP Status | Error Code | Description |
-|-------------|-----------|-------------|
-| 400 | `BAD_REQUEST` | Invalid request format/parameters |
-| 401 | `UNAUTHORIZED` | Missing or invalid authentication |
-| 403 | `FORBIDDEN` | Insufficient permissions |
-| 404 | `NOT_FOUND` | Resource not found |
-| 409 | `CONFLICT` | Resource conflict (duplicate, state mismatch) |
-| 422 | `VALIDATION_ERROR` | Request validation failed |
-| 429 | `RATE_LIMIT_EXCEEDED` | Too many requests |
-| 500 | `INTERNAL_SERVER_ERROR` | Server error |
-| 503 | `SERVICE_UNAVAILABLE` | Service temporarily unavailable |
+| HTTP Status | Error Code              | Description                                   |
+| ----------- | ----------------------- | --------------------------------------------- |
+| 400         | `BAD_REQUEST`           | Invalid request format/parameters             |
+| 401         | `UNAUTHORIZED`          | Missing or invalid authentication             |
+| 403         | `FORBIDDEN`             | Insufficient permissions                      |
+| 404         | `NOT_FOUND`             | Resource not found                            |
+| 409         | `CONFLICT`              | Resource conflict (duplicate, state mismatch) |
+| 422         | `VALIDATION_ERROR`      | Request validation failed                     |
+| 429         | `RATE_LIMIT_EXCEEDED`   | Too many requests                             |
+| 500         | `INTERNAL_SERVER_ERROR` | Server error                                  |
+| 503         | `SERVICE_UNAVAILABLE`   | Service temporarily unavailable               |
 
 ### 3.3. Validation Errors
 
@@ -225,12 +394,12 @@ X-RateLimit-Reset: 1704960060
 
 ### 4.2. Rate Limit Policies
 
-| Endpoint Type | Limit |
-|--------------|-------|
-| Public (Menu) | 100 req/min per IP |
+| Endpoint Type         | Limit                 |
+| --------------------- | --------------------- |
+| Public (Menu)         | 100 req/min per IP    |
 | Authenticated (Staff) | 1000 req/min per user |
-| Order Creation | 10 req/min per table |
-| Admin Operations | 100 req/min per admin |
+| Order Creation        | 10 req/min per table  |
+| Admin Operations      | 100 req/min per admin |
 
 ### 4.3. Rate Limit Exceeded Response
 
@@ -248,102 +417,266 @@ X-RateLimit-Reset: 1704960060
 
 ## 5. Tenants API
 
-### 5.1. Create Tenant (Onboarding)
+> Lưu ý: Việc tạo Tenant mới (Create) đã được thực hiện tự động trong API /auth/register/create. Các API dưới đây dành cho OWNER để thiết lập thông tin nhà hàng (Onboarding) sau khi đã đăng nhập.
 
-```http
-POST /tenants
-Authorization: Bearer <super_admin_token>
-Content-Type: application/json
+### Base URL
 
-Request:
+```
+/api/v1/tenants
+```
+
+### 1. Get Current Tenant Info
+
+```
+GET /api/v1/tenants/me
+Authorization: Bearer {accessToken}
+```
+
+**Response 200 OK:**
+
+```json
 {
-  "name": "The Golden Spoon",
-  "slug": "golden-spoon",
-  "email": "owner@goldenspoon.com",
-  "phone": "+84901234567",
-  "address": {
-    "street": "123 Main Street",
-    "city": "Ho Chi Minh City",
-    "country": "Vietnam",
-    "postalCode": "700000"
-  },
+  "id": "uuid",
+  "name": "Phở Ngon 123",
+  "slug": "pho-ngon-123",
+  "status": "ACTIVE",
+  "onboardingStep": 1,
   "settings": {
     "currency": "VND",
-    "timezone": "Asia/Ho_Chi_Minh",
-    "locale": "vi-VN",
-    "operatingHours": {
-      "monday": { "open": "10:00", "close": "22:00" },
-      "tuesday": { "open": "10:00", "close": "22:00" },
-      "wednesday": { "open": "10:00", "close": "22:00" },
-      "thursday": { "open": "10:00", "close": "22:00" },
-      "friday": { "open": "10:00", "close": "23:00" },
-      "saturday": { "open": "10:00", "close": "23:00" },
-      "sunday": { "open": "10:00", "close": "22:00" }
-    }
+    "language": "vi",
+    "timezone": "Asia/Ho_Chi_Minh"
   },
-  "plan": "basic"
+  "openingHours": {
+    "monday": { "open": "08:00", "close": "22:00", "closed": false },
+    "tuesday": { "open": "08:00", "close": "22:00", "closed": false },
+    "wednesday": { "open": "08:00", "close": "22:00", "closed": false },
+    "thursday": { "open": "08:00", "close": "22:00", "closed": false },
+    "friday": { "open": "08:00", "close": "22:00", "closed": false },
+    "saturday": { "open": "08:00", "close": "22:00", "closed": false },
+    "sunday": { "open": "08:00", "close": "22:00", "closed": true }
+  },
+  "createdAt": "2025-01-15T10:00:00Z",
+  "updatedAt": "2025-01-15T10:00:00Z"
 }
 
-Response: 201 Created
-{
-  "id": "tenant_123",
-  "name": "The Golden Spoon",
-  "slug": "golden-spoon",
-  "status": "active",
-  "createdAt": "2025-01-11T10:00:00Z",
-  "apiKey": "tk_live_abc123...",
-  "webhookSecret": "whsec_xyz789..."
-}
 ```
 
-### 5.2. Get Tenant Details
+---
 
-```http
-GET /tenants/{tenantId}
-Authorization: Bearer <admin_token>
+### 5.2. Update Tenant Profile (Onboarding Step 1)
 
-Response: 200 OK
-{
-  "id": "tenant_123",
-  "name": "The Golden Spoon",
-  "slug": "golden-spoon",
-  "email": "owner@goldenspoon.com",
-  "phone": "+84901234567",
-  "address": { /* ... */ },
-  "settings": { /* ... */ },
-  "plan": "basic",
-  "status": "active",
-  "createdAt": "2025-01-11T10:00:00Z",
-  "updatedAt": "2025-01-11T10:00:00Z"
-}
 ```
-
-### 5.3. Update Tenant
-
-```http
-PATCH /tenants/{tenantId}
-Authorization: Bearer <admin_token>
+PATCH /api/v1/tenants/profile
+Authorization: Bearer {accessToken}
 Content-Type: application/json
+```
 
-Request:
+**Request Body:**
+
+```json
 {
-  "settings": {
-    "operatingHours": {
-      "monday": { "open": "11:00", "close": "22:00" }
-    }
-  }
+  "name": "Phở Ngon 123",
+  "description": "Authentic Vietnamese Pho Restaurant",
+  "phone": "+84901234567",
+  "address": "123 Nguyen Hue, District 1, HCMC",
+  "logoUrl": "https://cdn.example.com/logo.png",
+  "slug": "new-pho-ngon-123",
 }
+```
 
-Response: 200 OK
+**Response 200 OK:**
+
+```json
 {
-  "id": "tenant_123",
-  "updatedAt": "2025-01-11T11:00:00Z",
-  // ...updated fields
+  "id": "uuid",
+  "name": "Phở Ngon 123",
+  "slug": "new-pho-ngon-123",
+  "description": "Authentic Vietnamese Pho Restaurant",
+  "phone": "+84901234567",
+  "address": "123 Nguyen Hue, District 1, HCMC",
+  "logoUrl": "https://cdn.example.com/logo.png",
+  "onboardingStep": 2,
+  "updatedAt": "2025-01-15T10:30:00Z"
 }
 ```
 
 ---
 
+### 5.3. Update Opening Hours (Onboarding Step 2)
+
+```
+PATCH /api/v1/tenants/opening-hours
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "monday": { "open": "08:00", "close": "22:00", "closed": false },
+  "tuesday": { "open": "08:00", "close": "22:00", "closed": false },
+  "wednesday": { "open": "08:00", "close": "22:00", "closed": false },
+  "thursday": { "open": "08:00", "close": "22:00", "closed": false },
+  "friday": { "open": "08:00", "close": "23:00", "closed": false },
+  "saturday": { "open": "08:00", "close": "23:00", "closed": false },
+  "sunday": { "open": "09:00", "close": "21:00", "closed": false }
+}
+```
+
+**Response 200 OK:**
+
+```json
+{
+  "openingHours": {
+    "monday": { "open": "08:00", "close": "22:00", "closed": false },
+    "tuesday": { "open": "08:00", "close": "22:00", "closed": false },
+    "wednesday": { "open": "08:00", "close": "22:00", "closed": false },
+    "thursday": { "open": "08:00", "close": "22:00", "closed": false },
+    "friday": { "open": "08:00", "close": "23:00", "closed": false },
+    "saturday": { "open": "08:00", "close": "23:00", "closed": false },
+    "sunday": { "open": "09:00", "close": "21:00", "closed": false }
+  },
+  "onboardingStep": 3,
+  "updatedAt": "2025-01-15T11:00:00Z"
+}
+```
+
+---
+
+### 5.4. Update Settings (Onboarding Step 3)
+
+```
+PATCH /api/v1/tenants/settings
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "currency": "VND",
+  "language": "vi",
+  "timezone": "Asia/Ho_Chi_Minh",
+  "tax": {
+    "enabled": true,
+    "rate": 10,
+    "label": "VAT"
+  },
+  "serviceCharge": {
+    "enabled": false,
+    "rate": 0
+  }
+}
+```
+
+**Response 200 OK:**
+
+```json
+{
+  "settings": {
+    "currency": "VND",
+    "language": "vi",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "tax": {
+      "enabled": true,
+      "rate": 10,
+      "label": "VAT"
+    },
+    "serviceCharge": {
+      "enabled": false,
+      "rate": 0
+    }
+  },
+  "onboardingStep": 4,
+  "updatedAt": "2025-01-15T11:30:00Z"
+}
+
+```
+
+---
+
+### 5.5. Configure Payment - Stripe Integration (Onboarding Step 4)
+
+Dành cho bảng `TENANT_PAYMENT_CONFIG`. API này liên kết tài khoản Stripe của nhà hàng để nhận tiền.
+
+```json
+PUT /tenants/payment-config
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "stripeAccountId": "acct_123456789", // ID tài khoản Stripe Connect của nhà hàng
+}
+```
+
+**Response: 200 OK**
+
+```json
+{
+  "id": "uuid-payment-config-1",
+  "tenantId": "uuid-tenant-123",
+  "stripeAccountId": "acct_123456789",
+  "updatedAt": "2025-01-11T12:00:00Z",
+  "onboardingStep": 5,
+}
+```
+
+---
+
+### 5.6. Complete Onboarding
+
+```
+POST /api/v1/tenants/complete-onboarding
+Authorization: Bearer {accessToken}
+```
+
+**Response 200 OK:**
+
+```json
+{
+  "message": "Onboarding completed successfully",
+  "onboardingStep": 6,
+  "completedAt": "2025-01-15T12:00:00Z"
+}
+```
+
+---
+
+### 5.7. Update Tenant Status (Admin only)
+
+```
+PATCH /api/v1/tenants/:id/status
+Authorization: Bearer {accessToken}
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "status": "SUSPENDED"
+}
+```
+
+**Response 200 OK:**
+
+```json
+{
+  "id": "uuid",
+  "status": "SUSPENDED",
+  "updatedAt": "2025-01-15T12:30:00Z"
+}
+```
+
+---
+
+<!--
 ## 6. Tables & QR API
 
 ### 6.1. Create Table
@@ -751,6 +1084,7 @@ Response: 200 OK
 ```
 
 **Valid State Transitions**:
+
 ```
 received → preparing
 preparing → ready
@@ -925,6 +1259,7 @@ Response: 200 OK
 Hệ thống gửi webhook events đến URL được cấu hình trong tenant settings.
 
 **Event Types**:
+
 - `order.created`
 - `order.state_changed`
 - `order.cancelled`
@@ -951,25 +1286,25 @@ Hệ thống gửi webhook events đến URL được cấu hình trong tenant s
 ### 11.3. Webhook Security
 
 **Signature Verification**:
+
 ```http
 X-Webhook-Signature: sha256=<hmac_signature>
 ```
 
 **Verify**:
-```javascript
-const crypto = require('crypto');
 
-const signature = request.headers['x-webhook-signature'];
+```javascript
+const crypto = require("crypto");
+
+const signature = request.headers["x-webhook-signature"];
 const payload = JSON.stringify(request.body);
 const secret = process.env.WEBHOOK_SECRET;
 
-const expectedSignature = 'sha256=' + crypto
-  .createHmac('sha256', secret)
-  .update(payload)
-  .digest('hex');
+const expectedSignature =
+  "sha256=" + crypto.createHmac("sha256", secret).update(payload).digest("hex");
 
 if (signature !== expectedSignature) {
-  throw new Error('Invalid signature');
+  throw new Error("Invalid signature");
 }
 ```
 
@@ -982,10 +1317,10 @@ if (signature !== expectedSignature) {
 
 openapi: 3.0.3
 info:
-  title: QR Dine-in Ordering Platform API
+  title: TKQR-in Ordering Platform API
   version: 1.0.0
   description: |
-    REST API cho hệ thống QR Dine-in Ordering Platform.
+    REST API cho hệ thống TKQR-in Ordering Platform.
     Multi-tenant platform cho phép nhà hàng quản lý menu, orders, và thanh toán.
   contact:
     email: dev@qr-ordering.com
@@ -1027,7 +1362,7 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: JWT access token
-    
+
     qrToken:
       type: apiKey
       in: header
@@ -1082,9 +1417,9 @@ components:
         phone:
           type: string
         address:
-          $ref: '#/components/schemas/Address'
+          $ref: "#/components/schemas/Address"
         settings:
-          $ref: '#/components/schemas/TenantSettings'
+          $ref: "#/components/schemas/TenantSettings"
         plan:
           type: string
           enum: [basic, pro, enterprise]
@@ -1190,7 +1525,7 @@ components:
         modifiers:
           type: array
           items:
-            $ref: '#/components/schemas/Modifier'
+            $ref: "#/components/schemas/Modifier"
         tags:
           type: array
           items:
@@ -1244,17 +1579,17 @@ components:
           type: string
           enum: [received, preparing, ready, served, closed, cancelled]
         customerInfo:
-          $ref: '#/components/schemas/CustomerInfo'
+          $ref: "#/components/schemas/CustomerInfo"
         items:
           type: array
           items:
-            $ref: '#/components/schemas/OrderItem'
+            $ref: "#/components/schemas/OrderItem"
         totals:
-          $ref: '#/components/schemas/OrderTotals'
+          $ref: "#/components/schemas/OrderTotals"
         stateHistory:
           type: array
           items:
-            $ref: '#/components/schemas/StateTransition'
+            $ref: "#/components/schemas/StateTransition"
         createdAt:
           type: string
           format: date-time
@@ -1330,7 +1665,7 @@ paths:
       tags: [System]
       security: []
       responses:
-        '200':
+        "200":
           description: Service is healthy
           content:
             application/json:
@@ -1366,7 +1701,7 @@ paths:
                   type: string
                   format: password
       responses:
-        '200':
+        "200":
           description: Login successful
           content:
             application/json:
@@ -1381,7 +1716,7 @@ paths:
                     type: integer
                   tokenType:
                     type: string
-        '401':
+        "401":
           description: Invalid credentials
 
   /tenants:
@@ -1393,14 +1728,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Tenant'
+              $ref: "#/components/schemas/Tenant"
       responses:
-        '201':
+        "201":
           description: Tenant created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Tenant'
+                $ref: "#/components/schemas/Tenant"
 
   /tenants/{tenantId}:
     get:
@@ -1413,12 +1748,12 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Tenant details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Tenant'
+                $ref: "#/components/schemas/Tenant"
 
   /tenants/{tenantId}/tables:
     post:
@@ -1435,9 +1770,9 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Table'
+              $ref: "#/components/schemas/Table"
       responses:
-        '201':
+        "201":
           description: Table created
 
   /menu:
@@ -1447,7 +1782,7 @@ paths:
       security:
         - qrToken: []
       responses:
-        '200':
+        "200":
           description: Menu data
           content:
             application/json:
@@ -1478,14 +1813,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Order'
+              $ref: "#/components/schemas/Order"
       responses:
-        '201':
+        "201":
           description: Order created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
+                $ref: "#/components/schemas/Order"
 
     get:
       summary: List orders
@@ -1504,7 +1839,7 @@ paths:
           schema:
             type: integer
       responses:
-        '200':
+        "200":
           description: Order list
           content:
             application/json:
@@ -1514,7 +1849,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Order'
+                      $ref: "#/components/schemas/Order"
                   pagination:
                     type: object
 
@@ -1542,7 +1877,7 @@ paths:
                 note:
                   type: string
       responses:
-        '200':
+        "200":
           description: State updated
 ```
 
@@ -1557,6 +1892,7 @@ Download Postman collection: [QR-Ordering-API.postman_collection.json](./QR-Orde
 ### 13.2. cURL Examples
 
 **Create Order**:
+
 ```bash
 curl -X POST https://api.qr-ordering.com/v1/orders \
   -H "X-QR-Token: eyJ0aWQi..." \
@@ -1583,6 +1919,6 @@ curl -X POST https://api.qr-ordering.com/v1/orders \
   }'
 ```
 
----
+--- -->
 
 **END OF OPENAPI DOCUMENTATION**

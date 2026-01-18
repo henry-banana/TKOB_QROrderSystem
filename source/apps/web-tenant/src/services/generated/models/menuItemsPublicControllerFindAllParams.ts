@@ -5,9 +5,9 @@
  * API Documentation for QR Ordering Platform
  * OpenAPI spec version: 1.0
  */
-import type { MenuItemsControllerFindAllSortOrder } from './menuItemsControllerFindAllSortOrder';
+import type { MenuItemsPublicControllerFindAllSortOrder } from './menuItemsPublicControllerFindAllSortOrder';
 
-export type MenuItemsControllerFindAllParams = {
+export type MenuItemsPublicControllerFindAllParams = {
 page?: number;
 limit?: number;
 categoryId?: string;
@@ -39,5 +39,5 @@ sortBy?: string;
 /**
  * Sort order
  */
-sortOrder?: MenuItemsControllerFindAllSortOrder;
+sortOrder?: MenuItemsPublicControllerFindAllSortOrder;
 };
